@@ -96,7 +96,7 @@ Write-Host ''
 Write-Host 'Required for Phase 0'
 Test-Tool 'git'  '2.30'   $true 'version control'            'winget install Git.Git'                     'git'  @('--version')
 Test-Tool 'uv'   '0.5.0'  $true 'Python envs + lockfile'     'winget install astral-sh.uv'                'uv'   @('--version')
-Test-Tool 'node' '26.0.0' $true 'frontend tooling (.nvmrc)'  'winget install OpenJS.NodeJS.LTS  (or fnm/nvm-windows)' 'node' @('--version')
+Test-Tool 'node' '26.0.0' $true 'frontend tooling (.nvmrc)'  'fnm install  (reads .nvmrc; get fnm: winget install Schniz.fnm)' 'node' @('--version')
 Test-Tool 'npm'  '10.0.0' $true 'frontend lockfile'          'Bundled with Node'                          'npm'  @('--version')
 # PowerShell itself: this script already runs on 7+, so only check the minimum.
 $psv = $PSVersionTable.PSVersion

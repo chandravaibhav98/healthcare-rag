@@ -37,7 +37,7 @@
 # 1. Toolchain (skip anything already installed)
 winget install --id Git.Git -e
 winget install --id astral-sh.uv -e
-winget install --id OpenJS.NodeJS.LTS -e        # confirm `node --version` prints v26.x
+winget install --id Schniz.fnm -e          # confirm `node --version` prints v26.x
 winget install --id Microsoft.PowerShell -e     # provides `pwsh` (Windows ships only 5.1 as `powershell`)
 # ⚠️ Close and reopen the terminal now so `pwsh`, `uv` and `node` are on PATH.
 #    Check: pwsh --version  →  PowerShell 7.x
