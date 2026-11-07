@@ -67,9 +67,12 @@ class Settings(BaseSettings):
     retrieval_top_k_default: int = Field(default=5, ge=1, le=TOP_K_MAX)
     retrieval_top_k_max: int = Field(default=TOP_K_MAX, ge=1, le=TOP_K_MAX)
     rrf_k: int = Field(default=60, ge=1)
+    retrieval_candidate_k: int = Field(default=50, ge=1, le=500)
     query_expansion_enabled: bool = True
     retrieval_floor: float = Field(default=0.0, ge=0.0, le=1.0)
     answer_max_sentences: int = Field(default=3, ge=1, le=10)
+    answer_mmr_lambda: float = Field(default=0.7, ge=0.0, le=1.0)
+    answer_min_relative_score: float = Field(default=0.5, ge=0.0, le=1.0)
     generator: GeneratorKind = GeneratorKind.EXTRACTIVE
 
     # --- validation and confidence (ADR-0002) --------------------------------

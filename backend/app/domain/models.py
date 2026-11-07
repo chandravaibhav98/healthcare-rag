@@ -68,6 +68,7 @@ class Chunk:
     has_overlap: bool  # starts with sentences carried over from the previous chunk
     title: str
     source_org: str
+    superseded: bool = False  # from the document's status (ADR-0010)
 
     @property
     def section(self) -> str:
@@ -93,6 +94,7 @@ class Chunk:
             "ordinal": self.ordinal,
             "token_count": self.token_count,
             "has_overlap": self.has_overlap,
+            "superseded": self.superseded,
             "text": self.text,
         }
 
@@ -109,4 +111,75 @@ class Chunk:
             token_count=rec["token_count"],
             has_overlap=rec["has_overlap"],
             text=rec["text"],
+            superseded=bool(rec.get("superseded", False)),
         )
+
+
+# ------------------------------------------------------------- retrieval ----
+
+
+@dataclass(frozen=True, slots=True)
+class RetrievedChunk:
+    """One fused retrieval hit. Ranks are 1-based; None = not in that retriever's list."""
+
+    chunk: Chunk
+    rank: int
+    score: float  # normalised fused score in (0, 1]
+    dense_rank: int | None
+    sparse_rank: int | None
+
+
+@dataclass(frozen=True, slots=True)
+class ExpandedQuery:
+    original: str
+    added_terms: tuple[str, ...]
+
+    @property
+    def text(self) -> str:
+        """Query text used for retrieval: original plus deterministic expansions."""
+        return " ".join((self.original, *self.added_terms)) if self.added_terms else self.original
+
+
+# ------------------------------------------------------------ generation ----
+
+
+@dataclass(frozen=True, slots=True)
+class AnswerSentence:
+    text: str  # as shown in the answer (table rows rendered "cell: cell")
+    chunk_id: str
+    start: int  # character span in the source chunk text (UI highlighting)
+    end: int
+    citation_id: int
+    score: float
+
+
+@dataclass(frozen=True, slots=True)
+class CitedChunk:
+    citation_id: int  # matches the [n] marker
+    retrieved: RetrievedChunk
+    spans: tuple[tuple[int, int], ...]  # sentence spans used from this chunk
+
+
+@dataclass(frozen=True, slots=True)
+class GeneratedAnswer:
+    text: str  # answer with inline [n] markers; empty when nothing relevant was found
+    sentences: tuple[AnswerSentence, ...]
+    citations: tuple[CitedChunk, ...]
+
+    @property
+    def is_empty(self) -> bool:
+        return not self.sentences
+
+
+# ------------------------------------------------------------ validation ----
+
+
+@dataclass(frozen=True, slots=True)
+class ValidationResult:
+    """Output of a Validator (ADR-0002). Implemented in Phase 3."""
+
+    coverage: float
+    query_support: float
+    retrieval_score: float
+    numeric_ok: bool
+    confidence: float

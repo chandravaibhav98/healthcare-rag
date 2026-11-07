@@ -1,7 +1,7 @@
 """Ports between the RAG pipeline and its swappable implementations.
 
-Phase 1 defines the indexing-side protocols. Retriever, Generator and Validator are
-added in Phases 2-3 next to their first implementation.
+Indexing-side ports (Phase 1): Embedder, VectorStore, SparseIndex.
+Query-side ports (Phase 2): Retriever, Generator, Validator (Validator is implemented in Phase 3).
 """
 
 from __future__ import annotations
@@ -11,6 +11,8 @@ from typing import Any, Protocol
 
 import numpy as np
 import numpy.typing as npt
+
+from app.domain.models import GeneratedAnswer, RetrievedChunk, ValidationResult
 
 FloatMatrix = npt.NDArray[np.float32]
 
@@ -45,3 +47,21 @@ class SparseIndex(Protocol):
     def search(self, query_terms: Sequence[str], k: int) -> list[tuple[int, float]]: ...
 
     def to_bytes(self) -> bytes: ...
+
+
+class Retriever(Protocol):
+    def retrieve(self, question: str, top_k: int) -> list[RetrievedChunk]:
+        """Best-first hits; deterministic for a given index and question."""
+        ...
+
+
+class Generator(Protocol):
+    def generate(self, question: str, evidence: Sequence[RetrievedChunk]) -> GeneratedAnswer:
+        """Answer from `evidence` only. Every [n] marker must resolve to a citation."""
+        ...
+
+
+class Validator(Protocol):
+    def validate(
+        self, question: str, answer: GeneratedAnswer, evidence: Sequence[RetrievedChunk]
+    ) -> ValidationResult: ...

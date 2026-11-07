@@ -15,7 +15,7 @@ from typing import Final
 
 import snowballstemmer
 
-ANALYSIS_VERSION: Final = 1
+ANALYSIS_VERSION: Final = 2  # v2: modal verbs (must, shall, may, might) are stop-words
 
 # Words keep internal hyphens, apostrophes, dots and commas between alphanumerics, so
 # "2-8", "covid-19", "0.5" and "1,000" stay single tokens (atomic numbers, plan Phase 3).

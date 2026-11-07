@@ -15,8 +15,9 @@ replaced by an organisation's secure guideline repository.
 | --- | --- |
 | Pre-Phase 0: initialisation | ✅ [readiness report](docs/project/phase-0-readiness.md) |
 | Phase 0: foundations, contracts and decisions | ✅ Built and verified · ⏳ ADR-0001 and ADR-0002 awaiting approval ([report](docs/project/phase-0-report.md)) |
-| **Phase 1: synthetic corpus and deterministic indexing** | ✅ 42 docs, 209 chunks, byte-identical rebuilds ([report](docs/project/phase-1-report.md)) |
-| Phase 2: retrieval and extractive QA core | ⏭️ Next |
+| Phase 1: synthetic corpus and deterministic indexing | ✅ 42 docs, 209 chunks, byte-identical rebuilds ([report](docs/project/phase-1-report.md)) |
+| **Phase 2: retrieval and extractive QA core** | ✅ Hybrid RRF + expansion, 15/15 smoke hit@5 ([report](docs/project/phase-2-report.md)) |
+| Phase 3: validation engine and `/qa` API | ⏭️ Next |
 
 ## Quick start
 

@@ -4,6 +4,7 @@
     uv run python scripts/pipeline.py verify  [--index DIR] [--corpus DIR]
     uv run python scripts/pipeline.py inspect [--index DIR] [--doc ID | --chunk ID] [--stats] [--limit N]
     uv run python scripts/pipeline.py determinism [--corpus DIR] [--runs N] [--save-manifest FILE]
+    uv run python scripts/pipeline.py ask "QUESTION" [--index DIR] [--top-k N] [--mode M] [--no-expansion]
 
 Defaults come from Settings (CORPUS_DIR, INDEX_DIR, CHUNK_*, EMBEDDING_*).
 Exit codes: 0 ok · 1 failure (invalid corpus, integrity or staleness problem).
@@ -27,6 +28,8 @@ from app.core.config import Settings
 from app.domain.models import Chunk
 from app.rag.ingestion.loader import CorpusError
 from app.rag.pipeline import BuildConfig, IndexIntegrityError, build_index, load_index, verify_index
+from app.rag.retrieval.hybrid import RetrievalMode
+from app.rag.runtime import build_runtime
 
 
 def _cmd_build(args: argparse.Namespace, settings: Settings) -> int:
@@ -156,6 +159,33 @@ def _cmd_determinism(args: argparse.Namespace, settings: Settings) -> int:
     return 1
 
 
+def _cmd_ask(args: argparse.Namespace, settings: Settings) -> int:
+    """Phase 2 developer tool: retrieval + extractive answer (no validation until Phase 3)."""
+    runtime = build_runtime(
+        load_index(args.index or settings.index_dir),
+        settings,
+        mode=RetrievalMode(args.mode),
+        expansion=False if args.no_expansion else None,
+    )
+    expanded = runtime.retriever.expand(args.question)
+    hits = runtime.retriever.retrieve(args.question, args.top_k)
+    print(f"index_version {runtime.index_version} · mode {args.mode} · top_k {args.top_k}")
+    if expanded.added_terms:
+        print(f"expanded with: {', '.join(expanded.added_terms)}")
+    print("\nrank  score  dense sparse  chunk_id")
+    for h in hits:
+        d = h.dense_rank if h.dense_rank is not None else "-"
+        s = h.sparse_rank if h.sparse_rank is not None else "-"
+        print(f"{h.rank:>4}  {h.score:.3f}  {d!s:>5} {s!s:>6}  {h.chunk.chunk_id}")
+    answer = runtime.generator.generate(args.question, hits)
+    print("\nANSWER (unvalidated; validation arrives in Phase 3)")
+    print("  " + (answer.text or "(no supporting sentence found)"))
+    for c in answer.citations:
+        ch = c.retrieved.chunk
+        print(f"  [{c.citation_id}] {ch.source_org} · {ch.title} · {ch.section}  ({ch.chunk_id})")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawTextHelpFormatter
@@ -186,6 +216,13 @@ def main(argv: list[str] | None = None) -> int:
         "--save-manifest", type=Path, help="copy the manifest here (cross-OS comparison)"
     )
 
+    a = sub.add_parser("ask", help="retrieve and extract an answer (developer tool)")
+    a.add_argument("question")
+    a.add_argument("--index", type=Path)
+    a.add_argument("--top-k", type=int, default=5)
+    a.add_argument("--mode", choices=[m.value for m in RetrievalMode], default="hybrid")
+    a.add_argument("--no-expansion", action="store_true")
+
     args = parser.parse_args(argv)
     settings = Settings()
     handlers = {
@@ -193,10 +230,11 @@ def main(argv: list[str] | None = None) -> int:
         "verify": _cmd_verify,
         "inspect": _cmd_inspect,
         "determinism": _cmd_determinism,
+        "ask": _cmd_ask,
     }
     try:
         return handlers[args.command](args, settings)
-    except (CorpusError, IndexIntegrityError, FileNotFoundError) as exc:
+    except (CorpusError, IndexIntegrityError, FileNotFoundError, ValueError) as exc:
         print(f"ERROR {exc}", file=sys.stderr)
         return 1
 

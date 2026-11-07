@@ -20,3 +20,26 @@ def client() -> Iterator[TestClient]:
 @pytest.fixture
 def fixture_corpus() -> Path:
     return FIXTURE_CORPUS
+
+
+@pytest.fixture(scope="session")
+def fixture_index_dir(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    from app.rag.ingestion.chunker import ChunkingConfig
+    from app.rag.pipeline import BuildConfig, build_index
+
+    out = tmp_path_factory.mktemp("fixture-index") / "index"
+    build_index(
+        FIXTURE_CORPUS, out, BuildConfig(chunking=ChunkingConfig(min_tokens=60, max_tokens=120))
+    )
+    return out
+
+
+@pytest.fixture(scope="session")
+def corpus_index_dir(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """The real corpus, built once per test session (about 1 s)."""
+    from app.core.config import REPO_ROOT
+    from app.rag.pipeline import build_index
+
+    out = tmp_path_factory.mktemp("corpus-index") / "index"
+    build_index(REPO_ROOT / "corpus", out)
+    return out

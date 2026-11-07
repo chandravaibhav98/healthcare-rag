@@ -52,3 +52,19 @@ def test_determinism_command(
     out = capsys.readouterr().out
     assert "PASS  2 builds byte-identical" in out
     assert saved.is_file()
+
+
+def test_ask_command(
+    tmp_path: Path, fixture_corpus: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    out = tmp_path / "idx"
+    assert main(["build", "--corpus", str(fixture_corpus), "--out", str(out)]) == 0
+    capsys.readouterr()
+    assert (
+        main(["ask", "How often is compliance monitored?", "--index", str(out), "--top-k", "3"])
+        == 0
+    )
+    printed = capsys.readouterr().out
+    assert "ANSWER (unvalidated" in printed
+    assert "cdc-tst-002" in printed
+    assert main(["ask", "x", "--index", str(out), "--top-k", "50"]) == 1  # top_k guard → exit 1

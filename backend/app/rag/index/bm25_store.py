@@ -38,6 +38,12 @@ class BM25Index:
                 postings.setdefault(term, []).append((doc_idx, tf))
         self._postings = dict(sorted(postings.items()))
 
+    def idf(self, term: str) -> float:
+        """BM25 IDF; unseen terms get the maximum (they are maximally specific)."""
+        n = self.size
+        df = len(self._postings.get(term, ()))
+        return math.log(1.0 + (n - df + 0.5) / (df + 0.5))
+
     def search(self, query_terms: Sequence[str], k: int) -> list[tuple[int, float]]:
         n = self.size
         if n == 0 or k <= 0:

@@ -1,6 +1,6 @@
 # ADR-0004 — Hybrid retrieval: FAISS dense + BM25, fused with RRF
 
-- **Status:** Proposed (draft; finalised in Phase 2)
+- **Status:** Accepted (implemented in Phase 2, 2026-11-07; the linear blend is still compared in Phase 4)
 - **Date:** 2026-11-07
 - **Plan ref:** `plan.md` §3 ADR-004, §4 Phase 2 · **Affects:** SC2
 
@@ -36,6 +36,26 @@ This confirms that fusion is needed (Phase 1 report §4).
 - Fused scores are rank-based. `retrieval_score` normalises them by
   `n_retrievers / (k + 1)` (ADR-0002).
 - The Phase 4 ablation table reports BM25-only, dense-only, RRF, and RRF + expansion.
+
+## Phase 2 implementation and evidence
+
+- `app/rag/retrieval/hybrid.py`: `reciprocal_rank_fusion` (pure function) and
+  `HybridRetriever` with candidate depth `RETRIEVAL_CANDIDATE_K` (50) per retriever. The
+  score is normalised to (0, 1] by `n_retrievers / (k + 1)`, and ties break on `chunk_id`.
+- `app/rag/retrieval/query_expansions.json`: 22 acronyms (both directions) and 14 synonym
+  groups, versioned.
+- Smoke set (15 questions, `tests/fixtures/smoke_questions.json`), hit@5 / MRR:
+
+  | Mode | No expansion | With expansion |
+  | --- | --- | --- |
+  | Dense only | 14/15 · 0.694 | 15/15 · 0.889 |
+  | BM25 only | 15/15 · 0.900 | 15/15 · **0.967** |
+  | **Hybrid RRF** | 15/15 · 0.856 | **15/15 · 0.933** |
+
+  Expansion helps every mode. On this small set BM25 + expansion edges out hybrid on MRR.
+  Hybrid stays the default because it was the most robust under paraphrase (dense alone
+  missed "taking off PPE" without expansion), and it is the configuration the plan
+  evaluates. The final choice is made on the Phase 4 dev split, not on 15 smoke questions.
 
 ## Verification
 

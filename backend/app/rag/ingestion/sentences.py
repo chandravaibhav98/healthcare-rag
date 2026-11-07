@@ -61,3 +61,30 @@ def split_sentences(text: str) -> list[str]:
     if tail:
         sentences.append(tail)
     return sentences
+
+
+def sentence_spans(text: str) -> list[tuple[int, int]]:
+    """Character spans of sentences in `text`, using the same rules as `split_sentences`.
+
+    Offsets refer to the original string (whitespace is not collapsed), which lets the UI
+    highlight the exact source text of an answer sentence. On single-spaced text,
+    ``[text[s:e] for s, e in sentence_spans(text)] == split_sentences(text)``.
+    """
+    spans: list[tuple[int, int]] = []
+    start = len(text) - len(text.lstrip())
+    for m in _BOUNDARY.finditer(text):
+        end_punct = m.start() + len(m.group(0).rstrip())
+        candidate = text[start:end_punct]
+        nxt = text[m.end() : m.end() + 1]
+        prev = _PREV_WORD.search(candidate)
+        if prev and prev.group(1).lower().rstrip(".") in ABBREVIATIONS:
+            continue
+        if nxt and nxt.islower():
+            continue
+        if candidate.strip():
+            spans.append((start, end_punct))
+        start = m.end()
+    tail = text[start:].rstrip()
+    if tail.strip():
+        spans.append((start, start + len(tail)))
+    return spans

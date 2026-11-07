@@ -1,0 +1,20 @@
+{
+  "description": "Phase 2 retrieval smoke set (plan exit criterion: expected document in the top 5 for >= 9 of 10). Not a gold set: Phase 4 builds the annotated dev/test splits. Any listed doc_id counts as a hit.",
+  "questions": [
+    {"q": "How long should I rub alcohol handrub?", "expected": ["who-hh-001", "cdc-hh-001", "nih-hh-002"]},
+    {"q": "What temperature range for refrigerated vaccine storage?", "expected": ["who-cc-001", "cdc-cc-002", "nih-cc-001"]},
+    {"q": "When must a sharps container be replaced?", "expected": ["who-shp-001", "nih-shp-001", "cdc-hcw-001"]},
+    {"q": "How often is respirator fit testing required?", "expected": ["who-ppe-002", "nih-ppe-001"]},
+    {"q": "What is the order for taking off PPE?", "expected": ["who-ppe-002", "cdc-ppe-001"]},
+    {"q": "How many air changes per hour does an AIIR need?", "expected": ["who-tbp-001", "cdc-tbp-001", "nih-tbp-001"]},
+    {"q": "When should HIV PEP start after a needle stick?", "expected": ["who-shp-001", "cdc-shp-001"]},
+    {"q": "How soon must a serious AEFI be reported?", "expected": ["who-aefi-001", "cdc-aefi-001", "nih-aefi-001"]},
+    {"q": "What is in the CLABSI insertion bundle?", "expected": ["who-dai-001", "cdc-dai-001"]},
+    {"q": "How long are people observed after a vaccine shot?", "expected": ["who-aefi-001", "cdc-aefi-001", "nih-aefi-001"]},
+    {"q": "Which steam sterilization temperature and holding time are used?", "expected": ["who-ster-001", "nih-ster-001"]},
+    {"q": "How long can a multi-dose vial be used after opening?", "expected": ["cdc-inj-001"]},
+    {"q": "When is an outbreak declared over?", "expected": ["who-ob-001"]},
+    {"q": "Which colour bag is used for infectious waste?", "expected": ["who-hcw-001"]},
+    {"q": "How high should the head of the bed be for ventilated patients?", "expected": ["nih-dai-001"]}
+  ]
+}

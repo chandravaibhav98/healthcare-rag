@@ -22,7 +22,7 @@ from dataclasses import asdict, dataclass, field
 from typing import Any, Final, Literal
 
 from app.domain.ids import make_chunk_id
-from app.domain.models import Chunk, Document
+from app.domain.models import Chunk, DocStatus, Document
 from app.rag.analysis import count_tokens
 from app.rag.ingestion.sentences import split_sentences
 
@@ -294,6 +294,7 @@ def _finalise(doc: Document, drafts: list[_Draft]) -> list[Chunk]:
                 has_overlap=d.has_overlap,
                 title=doc.meta.title,
                 source_org=doc.meta.source_org.value,
+                superseded=doc.meta.status is DocStatus.SUPERSEDED,
             )
         )
     return chunks
