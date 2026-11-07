@@ -1,0 +1,6 @@
+dist/
+coverage/
+node_modules/
+package-lock.json
+# Generated from backend/openapi.json in Phase 6 (scripts/gen-client).
+src/api/generated/

@@ -1,0 +1,78 @@
+# CI skeleton (Phase 0): lint + typecheck + unit tests on every PR and on main.
+# Jobs call scripts/setup.*, the same entry point a developer uses, so "green on CI"
+# and "green on my machine" mean the same thing. Phase 10 extends this pipeline.
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: lint + typecheck + tests (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        # Windows proves PowerShell parity and CRLF-safety from day one (risk R4).
+        os: [ubuntu-24.04, windows-2025]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: astral-sh/setup-uv@v10
+        with:
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Setup + lint + test (bash)
+        if: runner.os != 'Windows'
+        run: bash scripts/setup.sh --ci
+
+      - name: Setup + lint + test (PowerShell)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./scripts/setup.ps1 --ci
+
+      - name: Backend coverage
+        if: runner.os != 'Windows'
+        run: bash scripts/test.sh --backend --coverage --ci
+
+      - name: Upload coverage
+        if: runner.os != 'Windows' && always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: backend-coverage
+          path: backend/coverage.xml
+          if-no-files-found: ignore
+
+  hygiene:
+    name: pre-commit hygiene (whitespace, EOL, secrets, ruff)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
+        with:
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+      - run: uv sync --locked --directory backend
+      - name: pre-commit (tool hooks are covered by the quality job)
+        env:
+          SKIP: mypy,contract-snapshots,eslint,prettier,tsc
+        run: uv run --directory backend pre-commit run --all-files --show-diff-on-failure

@@ -2,6 +2,7 @@
 
 - **Date:** 2026-11-07
 - **Scope:** everything that must be true *before* Phase 0 starts (`plan.md` §4).
+- **Outcome:** complete. Phase 0 results are in [`phase-0-report.md`](phase-0-report.md).
   Phase 0 deliverables are listed at the end as the hand-off, not done here.
 
 ## 1. Pre-Phase 0 checklist

@@ -1,0 +1,102 @@
+[project]
+name = "healthcare-rag"
+version = "0.1.0"
+description = "Citation-first, evidence-validated RAG over (synthetic) healthcare guidelines."
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+license = { text = "Proprietary" }
+# Direct runtime dependencies are pinned exactly; uv.lock pins the full tree.
+# Phase 0 ships only what the API contract and config layer need. Later phases
+# add faiss-cpu, numpy, SQLAlchemy, etc. as they are actually used.
+dependencies = [
+    "fastapi==0.162.0",
+    "pydantic==2.14.3",
+    "pydantic-settings==2.16.2",
+]
+
+[dependency-groups]
+dev = [
+    "detect-secrets==1.5.0",
+    "httpx2==2.16.0",  # TestClient transport (starlette deprecates httpx)
+    "mypy==2.4.1",
+    "pre-commit==4.7.0",
+    "pytest==9.2.0",
+    "pytest-cov==7.1.0",
+    "ruff==0.17.4",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["app", "evaluation"]
+
+[tool.uv]
+default-groups = ["dev"]
+
+# ----------------------------------------------------------------- ruff -------
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+src = ["app", "evaluation", "scripts", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E", "W", "F",  # pycodestyle + pyflakes
+    "I",            # isort
+    "B",            # bugbear
+    "UP",           # pyupgrade
+    "SIM",          # simplify
+    "C4",           # comprehensions
+    "N",            # naming
+    "S",            # bandit (security)
+    "PT",           # pytest style
+    "ASYNC",        # async pitfalls
+    "T20",          # no stray print()
+    "RUF",          # ruff-specific
+]
+# Line length is owned by `ruff format`; long string literals are left intact.
+ignore = ["E501"]
+# "›" is the section_path separator (H1 › H2 › H3) used throughout the contract.
+allowed-confusables = ["›"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101"]   # assert is the point of a test
+"scripts/**" = ["T201"] # CLI scripts may print
+
+[tool.ruff.format]
+quote-style = "double"
+line-ending = "lf"
+
+# ----------------------------------------------------------------- mypy -------
+[tool.mypy]
+python_version = "3.12"
+strict = true
+plugins = ["pydantic.mypy"]
+files = ["app", "evaluation", "scripts", "tests"]
+warn_unreachable = true
+
+[tool.pydantic-mypy]
+init_forbid_extra = true
+init_typed = true
+warn_required_dynamic_aliases = true
+
+# ---------------------------------------------------------------- pytest ------
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]  # lets tests import scripts.* (the CLIs under backend/scripts)
+addopts = ["-ra", "--strict-markers", "--strict-config"]
+markers = [
+    "unit: fast, isolated tests (default)",
+    "integration: needs a built index or a database (Phase 1+)",
+]
+filterwarnings = ["error"]
+
+[tool.coverage.run]
+source = ["app", "evaluation"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true

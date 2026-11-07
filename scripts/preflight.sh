@@ -98,7 +98,7 @@ echo
 echo "Required for Phase 0"
 check_tool "git"  "2.30"  1 "version control"            "https://git-scm.com/downloads"               git --version
 check_tool "uv"   "0.5.0" 1 "Python envs + lockfile"     "https://docs.astral.sh/uv/getting-started/installation/" uv --version
-check_tool "node" "26.0.0" 1 "frontend tooling (.nvmrc)" "Install Node 26 LTS (nvm / fnm / nodejs.org)" node --version
+check_tool "node" "26.0.0" 1 "frontend tooling (.nvmrc)" "fnm install  (reads .nvmrc; get fnm: https://github.com/Schniz/fnm)" node --version
 check_tool "npm"  "10.0.0" 1 "frontend lockfile"         "Bundled with Node"                           npm --version
 
 # Python 3.12 is pinned in .python-version; uv can provision it on demand.

@@ -1,0 +1,78 @@
+# pre-commit hooks: installed by scripts/setup.*; run manually with
+#   uv run --directory backend pre-commit run --all-files
+#
+# Local hooks call the project's own pinned tools (backend/.venv, frontend/node_modules)
+# so that hooks, scripts/lint.* and CI always use identical versions.
+default_install_hook_types: [pre-commit]
+minimum_pre_commit_version: "4.0.0"
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
+        exclude: ^corpus/ # corpus bytes define index_version (SC1): never auto-rewrite
+      - id: end-of-file-fixer
+        exclude: ^corpus/
+      - id: mixed-line-ending
+        args: [--fix=lf]
+        exclude: ^corpus/
+      - id: check-yaml
+        args: [--allow-multiple-documents] # Kubernetes manifests (Phase 9)
+      - id: check-json
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: check-case-conflict # Windows/macOS are case-insensitive
+      - id: check-added-large-files
+        args: [--maxkb=1024]
+      - id: detect-private-key
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.17.4 # keep in sync with ruff in backend/pyproject.toml
+    hooks:
+      - id: ruff-check
+        args: [--fix]
+        files: ^backend/
+      - id: ruff-format
+        files: ^backend/
+
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        args: [--baseline, .secrets.baseline]
+        exclude: (^|/)(package-lock\.json|uv\.lock)$
+
+  - repo: local
+    hooks:
+      - id: mypy
+        name: mypy --strict (backend)
+        entry: uv run --directory backend mypy
+        language: system
+        files: ^backend/.*\.py$
+        pass_filenames: false
+      - id: contract-snapshots
+        name: contract snapshots current (openapi.json, gold.schema.json)
+        entry: uv run --directory backend python scripts/export_schemas.py --check
+        language: system
+        files: ^backend/(app|evaluation|scripts)/
+        pass_filenames: false
+      - id: eslint
+        name: eslint (frontend)
+        entry: npm --prefix frontend run -s lint
+        language: system
+        files: ^frontend/.*\.(ts|tsx|js)$
+        pass_filenames: false
+      - id: prettier
+        name: prettier --check (frontend)
+        entry: npm --prefix frontend run -s format:check
+        language: system
+        files: ^frontend/
+        pass_filenames: false
+      - id: tsc
+        name: tsc --noEmit (frontend)
+        entry: npm --prefix frontend run -s typecheck
+        language: system
+        files: ^frontend/.*\.(ts|tsx)$
+        pass_filenames: false

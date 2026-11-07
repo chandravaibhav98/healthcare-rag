@@ -13,18 +13,20 @@ supersedes it.
 
 ## Index
 
-| ADR | Title | Status | Plan ref | Due |
-| --- | --- | --- | --- | --- |
-| [0000](0000-record-architecture-decisions.md) | Record architecture decisions | Accepted | — | Pre-Phase 0 |
-| 0001 | Relevance definition for Precision@K (section-level + graded qrels) | Planned | §3 ADR-001 | **Phase 0 — must be Accepted** |
-| 0002 | Composite confidence (coverage + query support + retrieval) with numeric gate | Planned | §3 ADR-002 | **Phase 0 — must be Accepted** |
-| 0003 | Deterministic 256-D signed feature-hashing embedder | Planned | §3 ADR-003 | Phase 0 draft |
-| 0004 | Hybrid retrieval (FAISS + BM25, RRF k=60) | Planned | §3 ADR-004 | Phase 0 draft |
-| 0005 | FAISS `IndexFlatIP` over L2-normalised vectors | Planned | §3 ADR-005 | Phase 0 draft |
-| 0006 | API contract strictness and additive `meta` object | Planned | §3 ADR-006 | Phase 0 draft |
-| 0007 | Abstention response policy (patient-safety posture) | Planned | §3 ADR-007 | Phase 0 draft |
-| 0008 | Persistence, auth and index distribution | Planned | §3 ADR-008 | Phase 0 draft |
-| 0009 | Healthcare data handling (PHI redaction, retention) | Planned | §3 ADR-009 | Phase 0 draft |
+| ADR | Title | Status | Criteria |
+| --- | --- | --- | --- |
+| [0000](0000-record-architecture-decisions.md) | Record architecture decisions | Accepted | — |
+| [0001](0001-relevance-definition-for-precision-at-k.md) | Relevance definition for Precision@K (section-level + graded) | **Proposed: needs approval (Q1)** | SC2 |
+| [0002](0002-composite-confidence-and-numeric-gate.md) | Composite confidence + numeric gate | **Proposed: needs approval (Q2)** | SC3 |
+| [0003](0003-deterministic-hashed-embeddings.md) | Deterministic 256-D hashed embeddings | Proposed (finalise Phase 1) | SC1, SC2 |
+| [0004](0004-hybrid-retrieval-rrf.md) | Hybrid retrieval (FAISS + BM25, RRF) | Proposed (finalise Phase 2) | SC2 |
+| [0005](0005-faiss-index-flat-ip.md) | FAISS IndexFlatIP | Proposed (finalise Phase 1) | SC1 |
+| [0006](0006-api-contract-and-error-format.md) | API contract v1, additive meta, RFC 9457 errors | Proposed (implemented Phase 0) | SC4 |
+| [0007](0007-abstention-response-policy.md) | Abstention response policy | Proposed (Phase 3) | SC3 |
+| [0008](0008-persistence-auth-index-distribution.md) | Persistence, auth, index distribution | Proposed (Phases 5, 8, 9) | — |
+| [0009](0009-healthcare-data-handling.md) | Healthcare data handling (PHI) | Proposed (partly implemented Phase 0) | — |
+
+**Phase 0 exit** requires ADR-0001 and ADR-0002 to be *Accepted*: fill in their Approval tables, then change their status.
 
 Evidence that is already available for these ADRs is listed in
 [`../spikes/`](../spikes/).

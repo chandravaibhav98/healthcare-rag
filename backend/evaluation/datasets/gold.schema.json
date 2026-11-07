@@ -1,0 +1,99 @@
+{
+  "$defs": {
+    "QuestionKind": {
+      "enum": [
+        "direct",
+        "paraphrase",
+        "acronym",
+        "unanswerable"
+      ],
+      "title": "QuestionKind",
+      "type": "string"
+    },
+    "Split": {
+      "enum": [
+        "dev",
+        "test"
+      ],
+      "title": "Split",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "description": "Stable question id, e.g. q-0001.",
+      "pattern": "^q-\\d{4}$",
+      "title": "Id",
+      "type": "string"
+    },
+    "question": {
+      "maxLength": 1000,
+      "minLength": 3,
+      "title": "Question",
+      "type": "string"
+    },
+    "split": {
+      "$ref": "#/$defs/Split",
+      "description": "Tune on dev only; report on test (ADR-0002)."
+    },
+    "topic": {
+      "description": "Topic slug used for stratification, e.g. hand-hygiene.",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "title": "Topic",
+      "type": "string"
+    },
+    "kind": {
+      "$ref": "#/$defs/QuestionKind"
+    },
+    "answerable": {
+      "description": "False for out-of-scope/unsupported questions (abstention tests).",
+      "title": "Answerable",
+      "type": "boolean"
+    },
+    "relevant_chunk_ids": {
+      "description": "All relevant chunks (grade 1 or 2). Order is not meaningful.",
+      "items": {
+        "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*::[a-z0-9]+(?:-[a-z0-9]+)*::\\d{4}$",
+        "type": "string"
+      },
+      "title": "Relevant Chunk Ids",
+      "type": "array"
+    },
+    "grades": {
+      "description": "Graded relevance per chunk; keys == relevant_chunk_ids.",
+      "patternProperties": {
+        "^[a-z0-9]+(?:-[a-z0-9]+)*::[a-z0-9]+(?:-[a-z0-9]+)*::\\d{4}$": {
+          "enum": [
+            1,
+            2
+          ],
+          "type": "integer"
+        }
+      },
+      "title": "Grades",
+      "type": "object"
+    },
+    "expected_keywords": {
+      "description": "Terms a correct answer is expected to contain (diagnostics).",
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Expected Keywords",
+      "type": "array"
+    }
+  },
+  "required": [
+    "id",
+    "question",
+    "split",
+    "topic",
+    "kind",
+    "answerable"
+  ],
+  "title": "GoldItem",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "gold.schema.json"
+}

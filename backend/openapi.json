@@ -1,0 +1,547 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Healthcare Guidelines RAG Assistant",
+    "description": "Citation-first, evidence-validated question answering over guideline documents.\n\n> ⚠️ All guideline content is **synthetic**. Not for clinical use.",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/v1/qa": {
+      "post": {
+        "tags": [
+          "qa"
+        ],
+        "summary": "Answer a question with validated citations",
+        "description": "Answer a question strictly from the indexed guidelines. Every answer is scored for evidential support; weakly supported answers are withheld with `status: needs_review` (ADR-0007). **Synthetic corpus — not for clinical use.**",
+        "operationId": "answer_question",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QARequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QAResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Not Implemented",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/qa": {
+      "post": {
+        "tags": [
+          "qa"
+        ],
+        "summary": "Alias of POST /api/v1/qa (path required by the project brief)",
+        "description": "Answer a question strictly from the indexed guidelines. Every answer is scored for evidential support; weakly supported answers are withheld with `status: needs_review` (ADR-0007). **Synthetic corpus — not for clinical use.**",
+        "operationId": "answer_question_alias",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QARequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QAResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Not Implemented",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AbstentionReason": {
+        "type": "string",
+        "enum": [
+          "no_evidence",
+          "below_retrieval_floor",
+          "numeric_mismatch",
+          "low_confidence"
+        ],
+        "title": "AbstentionReason",
+        "description": "Why an answer was withheld (ADR-0007). Ordered from most to least specific."
+      },
+      "Citation": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Id",
+            "description": "Matches the inline [n] marker in `answer`."
+          },
+          "doc_id": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+            "title": "Doc Id",
+            "examples": [
+              "who-ipc-004"
+            ]
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Title"
+          },
+          "source_org": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Source Org",
+            "examples": [
+              "WHO",
+              "NIH",
+              "CDC"
+            ]
+          },
+          "section_path": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Section Path",
+            "examples": [
+              "PPE › Gloves"
+            ]
+          },
+          "chunk_id": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*::[a-z0-9]+(?:-[a-z0-9]+)*::\\d{4}$",
+            "title": "Chunk Id",
+            "examples": [
+              "who-ipc-004::ppe-gloves::0002"
+            ]
+          },
+          "snippet": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Snippet",
+            "description": "Evidence text shown to the user."
+          },
+          "score": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Score",
+            "description": "Normalised retrieval score of this chunk."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "doc_id",
+          "title",
+          "source_org",
+          "section_path",
+          "chunk_id",
+          "snippet",
+          "score"
+        ],
+        "title": "Citation"
+      },
+      "FieldError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Loc",
+            "description": "Path to the offending field, e.g. ['body', 'top_k']."
+          },
+          "msg": {
+            "type": "string",
+            "title": "Msg",
+            "description": "Human-readable reason."
+          },
+          "type": {
+            "type": "string",
+            "title": "Type",
+            "description": "Machine-readable error type, e.g. 'less_than_equal'."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "FieldError",
+        "description": "One request-validation failure. The rejected input is deliberately NOT echoed\nback, because a question may contain patient information (ADR-0009)."
+      },
+      "ProblemDetails": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "title": "Type",
+            "description": "URI identifying the problem type.",
+            "default": "about:blank"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "description": "Short, human-readable summary of the problem type."
+          },
+          "status": {
+            "type": "integer",
+            "maximum": 599.0,
+            "minimum": 100.0,
+            "title": "Status",
+            "description": "HTTP status code."
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail",
+            "description": "Explanation of this occurrence."
+          },
+          "instance": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instance",
+            "description": "URI of this occurrence (request path)."
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Id",
+            "description": "Correlation ID (Phase 3)."
+          },
+          "errors": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/FieldError"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Errors",
+            "description": "Validation failures (422)."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "title",
+          "status"
+        ],
+        "title": "ProblemDetails",
+        "description": "`application/problem+json` body for every 4xx/5xx response.",
+        "examples": [
+          {
+            "detail": "Request validation failed.",
+            "errors": [
+              {
+                "loc": [
+                  "body",
+                  "top_k"
+                ],
+                "msg": "Input should be less than or equal to 20",
+                "type": "less_than_equal"
+              }
+            ],
+            "status": 422,
+            "title": "Unprocessable Content",
+            "type": "about:blank"
+          }
+        ]
+      },
+      "QARequest": {
+        "properties": {
+          "question": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 3,
+            "title": "Question",
+            "description": "Natural-language question about the indexed guidelines."
+          },
+          "top_k": {
+            "type": "integer",
+            "maximum": 20.0,
+            "minimum": 1.0,
+            "title": "Top K",
+            "description": "Number of evidence chunks to retrieve.",
+            "default": 5
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "question"
+        ],
+        "title": "QARequest",
+        "examples": [
+          {
+            "question": "When should health workers perform hand hygiene?",
+            "top_k": 5
+          }
+        ]
+      },
+      "QAResponse": {
+        "properties": {
+          "answer": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Answer",
+            "description": "Extractive answer with [n] markers, or the abstention message."
+          },
+          "citations": {
+            "items": {
+              "$ref": "#/components/schemas/Citation"
+            },
+            "type": "array",
+            "title": "Citations",
+            "description": "Evidence; present even when abstaining (ADR-0007)."
+          },
+          "confidence": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence",
+            "description": "Composite support score (ADR-0002)."
+          },
+          "status": {
+            "$ref": "#/components/schemas/QAStatus",
+            "description": "`validated` only when confidence ≥ threshold and numeric_ok."
+          },
+          "meta": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ResponseMeta"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Additive diagnostics (ADR-0006)."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "answer",
+          "citations",
+          "confidence",
+          "status"
+        ],
+        "title": "QAResponse",
+        "examples": [
+          {
+            "answer": "Perform hand hygiene before donning gloves and after removing them [1].",
+            "citations": [
+              {
+                "chunk_id": "who-ipc-004::ppe-gloves::0002",
+                "doc_id": "who-ipc-004",
+                "id": 1,
+                "score": 0.82,
+                "section_path": "PPE › Gloves",
+                "snippet": "Hand hygiene must be performed before donning gloves ...",
+                "source_org": "WHO",
+                "title": "Glove Use in Health Care (synthetic)"
+              }
+            ],
+            "confidence": 0.78,
+            "meta": {
+              "abstained": false,
+              "index_version": "a1b2c3d",
+              "latency_ms": 41.0,
+              "request_id": "01JC9Z6X4Q2V8M3T5N7R1K0B2D",
+              "signals": {
+                "coverage": 1.0,
+                "numeric_ok": true,
+                "query_support": 0.71,
+                "retrieval_score": 0.64
+              }
+            },
+            "status": "validated"
+          }
+        ]
+      },
+      "QAStatus": {
+        "type": "string",
+        "enum": [
+          "validated",
+          "needs_review"
+        ],
+        "title": "QAStatus"
+      },
+      "ResponseMeta": {
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Request Id"
+          },
+          "index_version": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{7,64}$",
+            "title": "Index Version"
+          },
+          "latency_ms": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Latency Ms"
+          },
+          "abstained": {
+            "type": "boolean",
+            "title": "Abstained"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AbstentionReason"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "signals": {
+            "$ref": "#/components/schemas/Signals"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "request_id",
+          "index_version",
+          "latency_ms",
+          "abstained",
+          "signals"
+        ],
+        "title": "ResponseMeta"
+      },
+      "Signals": {
+        "properties": {
+          "coverage": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Coverage",
+            "description": "Share of answer content tokens found in the cited evidence."
+          },
+          "query_support": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Query Support",
+            "description": "Share of question key terms found in the cited evidence."
+          },
+          "retrieval_score": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Retrieval Score",
+            "description": "Normalised fused retrieval score of the cited chunks."
+          },
+          "numeric_ok": {
+            "type": "boolean",
+            "title": "Numeric Ok",
+            "description": "Every number/unit in the answer appears in its cited evidence."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "coverage",
+          "query_support",
+          "retrieval_score",
+          "numeric_ok"
+        ],
+        "title": "Signals",
+        "description": "The components of `confidence` (ADR-0002), exposed for transparency."
+      }
+    }
+  }
+}
