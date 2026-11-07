@@ -103,7 +103,16 @@ git push                             # watch the determinism-cross-os job
 If your Windows build prints a **different** `index_version` from the one above, stop and
 report it: that would be a real SC1 cross-OS finding. The CI job checks the same thing.
 
-## 7. Hand-off to Phase 2
+## 7. Post-push follow-ups (2026-11-07)
+
+| Item | Outcome |
+| --- | --- |
+| **SC1 on native Windows** | ✅ `build-index.sh` on Windows (Git Bash) printed `index_version 549fbb1ead30`, the same as both Linux machines, and `verify-determinism.sh` passed. The CI `determinism-cross-os` job automates this check |
+| Dependabot alert (1 moderate) | `minimatch 10.2.6` (GHSA-g3hv-75wg-m249, ReDoS), via `eslint` and `typescript-eslint`; dev tooling only. Fixed with an npm `override` to `minimatch 11.0.5`, not with npm's suggested **downgrade** of ESLint by a major version. `npm audit`: 0 vulnerabilities. Lint is still verified to catch errors |
+| Python dependencies | `pip-audit` on the locked tree: no known vulnerabilities |
+| Node in Git Bash | fnm was only hooked into PowerShell. The `~/.bashrc` line in [working agreements](working-agreements.md) §1 is required for Git Bash |
+
+## 8. Hand-off to Phase 2
 
 The index loads with full integrity checks (`load_index`), and both retrievers work.
 Phase 2 adds RRF fusion with `chunk_id` tie-breaks, acronym and synonym expansion

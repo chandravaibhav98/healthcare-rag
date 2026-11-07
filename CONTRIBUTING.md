@@ -77,6 +77,14 @@ return non-zero on failure. Shared helpers live in `scripts/lib/`.
   and TypeScript 7 (the native port) is not supported yet. Re-evaluate when
   `typescript-eslint` adds TS 7 support.
 
+- **npm `overrides`** (in `frontend/package.json`) force patched versions of transitive
+  dependencies when the direct dependency has not released a fix yet. Each override is
+  listed below with its advisory. Remove an override once upstream ships the fix.
+
+  | Override | Reason | Remove when |
+  | --- | --- | --- |
+  | `minimatch` → `11.0.5` | GHSA-g3hv-75wg-m249 (moderate, ReDoS) in `minimatch <11.0.1`, pulled in by `eslint` 10 and `typescript-eslint` 8 (lint tooling only; not shipped in the app) | `eslint` and `typescript-eslint` depend on `minimatch >=11.0.1` |
+
 ## Never commit
 
 `.env`, credentials or tokens, index artifacts (`artifacts/`, `*.faiss`), evaluation run
