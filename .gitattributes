@@ -1,0 +1,63 @@
+# -----------------------------------------------------------------------------
+# Line-ending & diff policy.
+#
+# WHY THIS FILE EXISTS BEFORE THE FIRST COMMIT:
+#   Success criterion SC1 requires byte-identical index rebuilds on Linux AND
+#   Windows. The corpus hash (and therefore index_version) is computed over the
+#   raw bytes of corpus/*.md. If Git converted line endings to CRLF on a Windows
+#   checkout, the same commit would produce a different corpus hash per OS.
+#   Normalising from commit #1 means no history ever contains mixed endings.
+# -----------------------------------------------------------------------------
+
+# Default: Git decides text vs binary, text is stored AND checked out as LF.
+*               text=auto eol=lf
+
+# Determinism-critical inputs: force text + LF (never auto-detected as binary).
+corpus/**       text eol=lf
+*.md            text eol=lf
+*.jsonl         text eol=lf
+*.json          text eol=lf
+*.yaml          text eol=lf
+*.yml           text eol=lf
+*.toml          text eol=lf
+
+# Source code
+*.py            text eol=lf diff=python
+*.ts            text eol=lf
+*.tsx           text eol=lf
+*.js            text eol=lf
+*.css           text eol=lf
+*.html          text eol=lf diff=html
+*.sh            text eol=lf
+# PowerShell 7+ reads LF scripts natively; keep one ending repo-wide.
+*.ps1           text eol=lf
+*.psm1          text eol=lf
+Dockerfile      text eol=lf
+*.Dockerfile    text eol=lf
+
+# Windows-only launchers genuinely need CRLF.
+*.bat           text eol=crlf
+*.cmd           text eol=crlf
+
+# Lockfiles / generated contracts: keep, but collapse in GitHub diffs.
+uv.lock                         text eol=lf linguist-generated=true
+package-lock.json               text eol=lf linguist-generated=true -diff
+**/openapi.json                 text eol=lf linguist-generated=true
+
+# Binary artifacts: never normalise, never diff.
+*.faiss         binary
+*.pkl           binary
+*.npy           binary
+*.npz           binary
+*.parquet       binary
+*.png           binary
+*.jpg           binary
+*.jpeg          binary
+*.gif           binary
+*.ico           binary
+*.webp          binary
+*.pdf           binary
+*.mp4           binary
+*.webm          binary
+*.woff          binary
+*.woff2         binary

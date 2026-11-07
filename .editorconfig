@@ -1,0 +1,31 @@
+# https://editorconfig.org — editor-level guard that matches .gitattributes.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+
+[*.py]
+indent_size = 4
+max_line_length = 100
+
+[*.{ps1,psm1}]
+indent_size = 4
+
+[*.md]
+# Two trailing spaces are a hard line break in Markdown.
+trim_trailing_whitespace = false
+
+[corpus/**.md]
+# Corpus bytes feed the index hash: never let an editor rewrite them silently.
+trim_trailing_whitespace = false
+
+[{Makefile,*.mk}]
+indent_style = tab
+
+[*.{bat,cmd}]
+end_of_line = crlf

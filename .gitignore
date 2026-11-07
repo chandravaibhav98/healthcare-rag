@@ -1,0 +1,60 @@
+# ---------------------------------------------------------------- secrets ----
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+kubeconfig*
+.secrets/
+
+# ----------------------------------------------------------------- python ----
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.python-eggs/
+*.egg-info/
+build/
+dist/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.hypothesis/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# ------------------------------------------------------------------- node ----
+node_modules/
+frontend/dist/
+*.tsbuildinfo
+.vite/
+.eslintcache
+npm-debug.log*
+
+# ---------------------------------------------- build & run artifacts --------
+# Index artifacts are BUILT, never committed (SC1: rebuild must reproduce them).
+artifacts/
+backend/artifacts/
+backend/index/
+*.faiss
+# Evaluation run outputs; the summary is committed under docs/ instead.
+backend/evaluation/reports/*
+!backend/evaluation/reports/.gitkeep
+
+# ------------------------------------------------------------- playwright ----
+e2e/test-results/
+e2e/playwright-report/
+e2e/blob-report/
+e2e/.auth/
+
+# ----------------------------------------------------------- editors / OS ----
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini
