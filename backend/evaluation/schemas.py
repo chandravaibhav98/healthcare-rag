@@ -19,8 +19,6 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Annotated, Literal, Self
 
-from app.api.schemas.qa import Question
-from app.domain.ids import ChunkId, Slug
 from pydantic import (
     BaseModel,
     ConfigDict,
@@ -29,6 +27,9 @@ from pydantic import (
     ValidationError,
     model_validator,
 )
+
+from app.api.schemas.qa import Question
+from app.domain.ids import ChunkId, Slug
 
 Grade = Literal[1, 2]
 GoldId = Annotated[str, StringConstraints(pattern=r"^q-\d{4}$")]

@@ -5,6 +5,8 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from pydantic import ValidationError
+
 from evaluation.schemas import (
     GoldDatasetError,
     GoldItem,
@@ -12,7 +14,6 @@ from evaluation.schemas import (
     load_gold_jsonl,
     parse_gold_lines,
 )
-from pydantic import ValidationError
 
 DATASETS = Path(__file__).resolve().parents[2] / "evaluation" / "datasets"
 A = "who-ipc-004::ppe-gloves::0002"

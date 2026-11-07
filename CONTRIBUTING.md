@@ -1,5 +1,8 @@
 # Contributing
 
+> **Primary shell: Git Bash.** Commands in all docs use bash syntax; the `.ps1` twins are kept
+> for parity and run in CI. See [`docs/project/working-agreements.md`](docs/project/working-agreements.md).
+
 ## Workflow: trunk-based
 
 - `main` is always releasable and protected. CI (`.github/workflows/ci.yml`) must be green.

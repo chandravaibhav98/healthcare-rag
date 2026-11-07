@@ -9,6 +9,9 @@ Set-StrictMode -Version Latest
 $script:RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
 $script:StepFailures = [System.Collections.Generic.List[string]]::new()
 
+# UTF-8 mode for every Python process (parity with common.sh).
+$env:PYTHONUTF8 = '1'
+
 $useColor = -not ($env:NO_COLOR -or $env:CI -or [Console]::IsOutputRedirected)
 $e = [char]27
 $script:C = if ($useColor) {
@@ -68,6 +71,12 @@ function Complete-Steps([string]$Name) {
     }
     Write-Host ''
     Write-Host "$($C.Green)$Name passed.$($C.Off)"
+}
+
+# Resolve-AbsolutePath: absolute path whose target need not exist (parity with abs_path).
+function Resolve-AbsolutePath([string]$Path) {
+    if ([System.IO.Path]::IsPathRooted($Path)) { return $Path }
+    return [System.IO.Path]::GetFullPath((Join-Path (Get-Location).Path $Path))
 }
 
 # Import-DotEnv: KEY=VALUE pairs into the process env; existing variables win.

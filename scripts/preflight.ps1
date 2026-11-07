@@ -181,5 +181,5 @@ if ($script:Fails -gt 0) {
     Write-Host "$($C.Fail)NOT READY$($C.Off): $($script:Fails) blocking issue(s), $($script:Warns) warning(s)."
     exit 1
 }
-Write-Host "$($C.Ok)READY for Phase 0$($C.Off) ($($script:Warns) warning(s))."
+Write-Host "$($C.Ok)READY$($C.Off) ($($script:Warns) warning(s))."
 exit 0

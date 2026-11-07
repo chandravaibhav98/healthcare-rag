@@ -59,6 +59,9 @@ class Settings(BaseSettings):
     index_dir: Path = Path("artifacts/index")
     embedding_dim: int = Field(default=256, ge=16, le=4096)
     embedding_hash_salt: str = Field(default="hc-rag-v1", min_length=1)
+    chunk_min_tokens: int = Field(default=80, ge=20)
+    chunk_max_tokens: int = Field(default=160, ge=40)
+    chunk_overlap_ratio: float = Field(default=0.15, ge=0.0, lt=0.5)
 
     # --- retrieval and generation --------------------------------------------
     retrieval_top_k_default: int = Field(default=5, ge=1, le=TOP_K_MAX)
@@ -123,6 +126,8 @@ class Settings(BaseSettings):
         )
         if abs(weights - 1.0) > 1e-6:
             raise ValueError(f"confidence weights must sum to 1.0, got {weights:.4f}")
+        if self.chunk_min_tokens > self.chunk_max_tokens:
+            raise ValueError("chunk_min_tokens must be <= chunk_max_tokens")
         if self.retrieval_top_k_default > self.retrieval_top_k_max:
             raise ValueError("retrieval_top_k_default must be <= retrieval_top_k_max")
         if self.generator is GeneratorKind.LLM and (

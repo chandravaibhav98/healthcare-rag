@@ -171,5 +171,5 @@ if (( FAILS > 0 )); then
   printf '%sNOT READY%s: %d blocking issue(s), %d warning(s).\n' "$C_FAIL" "$C_OFF" "$FAILS" "$WARNS"
   exit 1
 fi
-printf '%sREADY for Phase 0%s (%d warning(s)).\n' "$C_OK" "$C_OFF" "$WARNS"
+printf '%sREADY%s (%d warning(s)).\n' "$C_OK" "$C_OFF" "$WARNS"
 exit 0

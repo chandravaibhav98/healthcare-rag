@@ -14,8 +14,9 @@ replaced by an organisation's secure guideline repository.
 | Stage | State |
 | --- | --- |
 | Pre-Phase 0: initialisation | ✅ [readiness report](docs/project/phase-0-readiness.md) |
-| **Phase 0: foundations, contracts and decisions** | ✅ Built and verified · ⏳ ADR-0001 and ADR-0002 awaiting approval ([report](docs/project/phase-0-report.md)) |
-| Phase 1: synthetic corpus and deterministic indexing | ⏭️ Next |
+| Phase 0: foundations, contracts and decisions | ✅ Built and verified · ⏳ ADR-0001 and ADR-0002 awaiting approval ([report](docs/project/phase-0-report.md)) |
+| **Phase 1: synthetic corpus and deterministic indexing** | ✅ 42 docs, 209 chunks, byte-identical rebuilds ([report](docs/project/phase-1-report.md)) |
+| Phase 2: retrieval and extractive QA core | ⏭️ Next |
 
 ## Quick start
 
@@ -23,12 +24,11 @@ Prerequisites: Git, [uv](https://docs.astral.sh/uv/), Node 26 (`.nvmrc`; e.g. vi
 PowerShell 7+ on Windows. Check with `scripts/preflight.*`.
 
 ```bash
-scripts/setup.sh                 # Linux / macOS / Git Bash
+scripts/setup.sh                 # Git Bash (primary on Windows), Linux, macOS
 ```
 
-```powershell
-pwsh ./scripts/setup.ps1         # Windows
-```
+PowerShell twins exist for every script (`pwsh ./scripts/setup.ps1`). See
+[`docs/project/working-agreements.md`](docs/project/working-agreements.md) for the Git Bash setup.
 
 `setup` checks the toolchain, creates `.env`, installs the locked dependencies, installs
 the pre-commit hooks, and finishes by running every lint check and test.
@@ -60,7 +60,7 @@ and returns `501`; the pipeline arrives in Phase 3.
 | --- | --- |
 | `backend/` | FastAPI app, RAG library, evaluation, tests ([README](backend/README.md)) |
 | `frontend/` | React + TypeScript + Vite SPA |
-| `corpus/` | Synthetic guideline Markdown (Phase 1) |
+| `corpus/` | 42 synthetic guideline documents ([corpus card](corpus/CORPUS_CARD.md)) |
 | `e2e/` | Playwright E2E and demo (Phases 7 and 11) |
 | `deploy/` | Docker, Compose, Kubernetes (Phases 8 and 9) |
 | `scripts/` | Ops scripts, `.sh` + `.ps1` pairs ([CONTRIBUTING](CONTRIBUTING.md)) |
@@ -74,6 +74,8 @@ and returns `501`; the pipeline arrives in Phase 3.
 | `setup` | Clean machine → lint and tests green (`--ci`, `--skip-hooks`, `--no-verify`) |
 | `lint` | ruff, mypy, contract snapshots, eslint, prettier, tsc (`--fix`) |
 | `test` | pytest and vitest (`--backend`, `--frontend`, `--coverage`) |
+| `build-index` | Build and verify the index from `corpus/` (`--inspect` for chunk statistics) |
+| `verify-determinism` | SC1: N isolated rebuilds with different hash seeds must be byte-identical |
 
 More scripts arrive with later phases (`plan.md` §5).
 

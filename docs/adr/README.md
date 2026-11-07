@@ -18,9 +18,9 @@ supersedes it.
 | [0000](0000-record-architecture-decisions.md) | Record architecture decisions | Accepted | — |
 | [0001](0001-relevance-definition-for-precision-at-k.md) | Relevance definition for Precision@K (section-level + graded) | **Proposed: needs approval (Q1)** | SC2 |
 | [0002](0002-composite-confidence-and-numeric-gate.md) | Composite confidence + numeric gate | **Proposed: needs approval (Q2)** | SC3 |
-| [0003](0003-deterministic-hashed-embeddings.md) | Deterministic 256-D hashed embeddings | Proposed (finalise Phase 1) | SC1, SC2 |
+| [0003](0003-deterministic-hashed-embeddings.md) | Deterministic 256-D hashed embeddings | **Accepted** (Phase 1) | SC1, SC2 |
 | [0004](0004-hybrid-retrieval-rrf.md) | Hybrid retrieval (FAISS + BM25, RRF) | Proposed (finalise Phase 2) | SC2 |
-| [0005](0005-faiss-index-flat-ip.md) | FAISS IndexFlatIP | Proposed (finalise Phase 1) | SC1 |
+| [0005](0005-faiss-index-flat-ip.md) | FAISS IndexFlatIP | **Accepted** (Phase 1) | SC1 |
 | [0006](0006-api-contract-and-error-format.md) | API contract v1, additive meta, RFC 9457 errors | Proposed (implemented Phase 0) | SC4 |
 | [0007](0007-abstention-response-policy.md) | Abstention response policy | Proposed (Phase 3) | SC3 |
 | [0008](0008-persistence-auth-index-distribution.md) | Persistence, auth, index distribution | Proposed (Phases 5, 8, 9) | — |

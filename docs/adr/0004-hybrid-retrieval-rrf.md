@@ -25,6 +25,12 @@ Hybrid **RRF (k = `RRF_K` = 60)** over FAISS and BM25, with ties broken by `chun
 ordering is deterministic. A deterministic **acronym/synonym expansion** map lives in
 config (`QUERY_EXPANSION_ENABLED`). The linear blend is evaluated as an ablation in Phase 4.
 
+## Phase 1 evidence
+
+On an informal 10-question probe of the real corpus, BM25 placed the expected section in
+its top 4 for all 10 questions, while dense-only retrieval was noisier (P@5 ≈ 0.38).
+This confirms that fusion is needed (Phase 1 report §4).
+
 ## Consequences
 
 - Fused scores are rank-based. `retrieval_score` normalises them by

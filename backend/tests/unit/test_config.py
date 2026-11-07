@@ -7,8 +7,9 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from app.core.config import REPO_ROOT, AppEnv, Settings
 from pydantic import ValidationError
+
+from app.core.config import REPO_ROOT, AppEnv, Settings
 
 ENV_EXAMPLE = REPO_ROOT / ".env.example"
 _KEY_RE = re.compile(r"^([A-Z][A-Z0-9_]*)=", re.MULTILINE)

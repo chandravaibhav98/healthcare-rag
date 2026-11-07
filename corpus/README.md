@@ -3,7 +3,8 @@
 Synthetic WHO-, NIH- and CDC-*style* guideline documents (Markdown + YAML front-matter).
 **Not real guidance. Not for clinical use.**
 
-Populated in **Phase 1**, together with `CORPUS_CARD.md` (provenance, schema, topic coverage).
+42 documents (WHO 14 · CDC 14 · NIH 14). See [`CORPUS_CARD.md`](CORPUS_CARD.md) for provenance, schema,
+topic coverage and the deliberate superseded/current conflicts.
 
 Rules that already apply:
 - Files are LF-only and byte-stable. `.gitattributes` and `.editorconfig` enforce this, and

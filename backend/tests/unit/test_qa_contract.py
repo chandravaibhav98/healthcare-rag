@@ -5,8 +5,9 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
-from app.api.schemas.qa import QARequest, QAResponse, QAStatus
 from pydantic import ValidationError
+
+from app.api.schemas.qa import QARequest, QAResponse, QAStatus
 
 CITATION: dict[str, Any] = {
     "id": 1,

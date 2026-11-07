@@ -1,4 +1,5 @@
-# CI skeleton (Phase 0): lint + typecheck + unit tests on every PR and on main.
+# CI (Phases 0-1): lint + typecheck + tests on every PR and on main, plus the SC1
+# determinism gate (byte-identical index on Linux and Windows).
 # Jobs call scripts/setup.*, the same entry point a developer uses, so "green on CI"
 # and "green on my machine" mean the same thing. Phase 10 extends this pipeline.
 name: ci
@@ -60,6 +61,51 @@ jobs:
           name: backend-coverage
           path: backend/coverage.xml
           if-no-files-found: ignore
+
+  determinism:
+    name: index determinism (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2025]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
+        with:
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+      - run: uv sync --locked --directory backend
+      - name: Rebuild 3x with different hash seeds (bash)
+        if: runner.os != 'Windows'
+        run: bash scripts/verify-determinism.sh --runs 3 --save-manifest determinism/manifest-${{ runner.os }}.json
+      - name: Rebuild 3x with different hash seeds (PowerShell)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./scripts/verify-determinism.ps1 --runs 3 --save-manifest determinism/manifest-${{ runner.os }}.json
+      - uses: actions/upload-artifact@v7
+        with:
+          name: manifest-${{ runner.os }}
+          path: determinism/manifest-${{ runner.os }}.json
+          if-no-files-found: error
+
+  determinism-cross-os:
+    name: SC1 - identical index on Linux and Windows
+    needs: determinism
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: manifest-*
+          merge-multiple: true
+          path: manifests
+      - name: Compare manifests byte-for-byte
+        run: |
+          ls -l manifests
+          cmp manifests/manifest-Linux.json manifests/manifest-Windows.json
+          echo "index_version: $(python3 -c 'import json;print(json.load(open("manifests/manifest-Linux.json"))["index_version"])')"
 
   hygiene:
     name: pre-commit hygiene (whitespace, EOL, secrets, ruff)

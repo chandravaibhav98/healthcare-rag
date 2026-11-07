@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+
 from app.domain.ids import make_chunk_id
 
 

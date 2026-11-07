@@ -6,12 +6,15 @@ readme = "README.md"
 requires-python = ">=3.12,<3.13"
 license = { text = "Proprietary" }
 # Direct runtime dependencies are pinned exactly; uv.lock pins the full tree.
-# Phase 0 ships only what the API contract and config layer need. Later phases
-# add faiss-cpu, numpy, SQLAlchemy, etc. as they are actually used.
+# Dependencies are added in the phase that first uses them.
 dependencies = [
+    "faiss-cpu==1.15.1",       # Phase 1: exact vector index (ADR-0005)
     "fastapi==0.162.0",
+    "numpy==2.5.4",            # Phase 1: float32 vectors
     "pydantic==2.14.3",
     "pydantic-settings==2.16.2",
+    "pyyaml==6.0.3",           # Phase 1: corpus front-matter (safe_load only)
+    "snowballstemmer==3.1.1",  # Phase 1: deterministic stemming (BM25; validation in Phase 3)
 ]
 
 [dependency-groups]
@@ -23,6 +26,7 @@ dev = [
     "pytest==9.2.0",
     "pytest-cov==7.1.0",
     "ruff==0.17.4",
+    "types-pyyaml==6.0.12.20261103",
 ]
 
 [build-system]
@@ -39,7 +43,7 @@ default-groups = ["dev"]
 [tool.ruff]
 target-version = "py312"
 line-length = 100
-src = ["app", "evaluation", "scripts", "tests"]
+src = ["."]
 
 [tool.ruff.lint]
 select = [
@@ -59,7 +63,10 @@ select = [
 # Line length is owned by `ruff format`; long string literals are left intact.
 ignore = ["E501"]
 # "›" is the section_path separator (H1 › H2 › H3) used throughout the contract.
-allowed-confusables = ["›"]
+allowed-confusables = ["›", "×", "–"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app", "evaluation", "scripts"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101"]   # assert is the point of a test
@@ -76,6 +83,11 @@ strict = true
 plugins = ["pydantic.mypy"]
 files = ["app", "evaluation", "scripts", "tests"]
 warn_unreachable = true
+
+[[tool.mypy.overrides]]
+# snowballstemmer ships no type information; faiss stubs are partial.
+module = ["faiss", "faiss.*", "snowballstemmer"]
+ignore_missing_imports = true
 
 [tool.pydantic-mypy]
 init_forbid_extra = true

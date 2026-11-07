@@ -15,6 +15,11 @@ BACKEND_DIR="$REPO_ROOT/backend"
 FRONTEND_DIR="$REPO_ROOT/frontend"
 STEP_FAILURES=()
 
+# UTF-8 mode for every Python process we start. Under Git Bash (mintty), stdout is a
+# pipe and Python would otherwise fall back to the legacy Windows code page (cp1252),
+# crashing on "›", "—" or "°C" (docs/project/working-agreements.md).
+export PYTHONUTF8=1
+
 # Colours: off when not a TTY, under CI, or when NO_COLOR is set (no-color.org).
 init_colors() {
   if [[ -t 1 && -z "${NO_COLOR:-}" && -z "${CI:-}" ]]; then
@@ -63,6 +68,15 @@ finish_steps() {
     exit 1
   fi
   printf '\n%s%s passed.%s\n' "$C_GREEN" "$1" "$C_OFF"
+}
+
+# abs_path <path>: absolute path (target need not exist). Needed because backend
+# commands run with --directory backend, which would break repo-relative paths.
+abs_path() {
+  case "$1" in
+    /*|[A-Za-z]:[\\/]*) printf '%s\n' "$1" ;;
+    *) printf '%s/%s\n' "$PWD" "$1" ;;
+  esac
 }
 
 # load_dotenv [file]: export KEY=VALUE pairs (comments and blanks ignored).
