@@ -18,7 +18,7 @@ from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 from app.api.schemas.qa import TOP_K_MAX
 
 REPO_ROOT: Final = Path(__file__).resolve().parents[3]
-DEV_JWT_SECRET: Final = "change-me-dev-only"  # noqa: S105  (rejected in production below)
+DEV_JWT_SECRET: Final = "change-me-dev-only-not-for-production-use"  # noqa: S105  (rejected in production below)
 
 
 class AppEnv(StrEnum):
@@ -95,6 +95,20 @@ class Settings(BaseSettings):
     jwt_secret: SecretStr = SecretStr(DEV_JWT_SECRET)
     jwt_access_ttl_minutes: int = Field(default=15, ge=1)
     jwt_refresh_ttl_days: int = Field(default=7, ge=1)
+    # Refresh-token cookie gets `Secure` when true; None = automatic (true outside dev/test).
+    auth_cookie_secure: bool | None = None
+    login_rate_limit: str = Field(default="10/minute", pattern=r"^\d+/(second|minute|hour|day)$")
+    query_log_queue_size: int = Field(default=10_000, ge=100)
+    retention_purge_interval_minutes: int = Field(default=60, ge=1)
+    config_poll_seconds: int = Field(default=30, ge=1)
+    # Used only by scripts/seed.* to create the first admin (never read by the API).
+    seed_admin_email: str | None = None
+    seed_admin_password: SecretStr | None = None
+
+    # --- index versions (Phase 5) ------------------------------------------------
+    index_store_dir: Path = Path("artifacts/indexes")
+    # POST /admin/index/rebuild. None = automatic (allowed only in development and test).
+    allow_index_rebuild: bool | None = None
 
     # --- observability ----------------------------------------------------------
     metrics_enabled: bool = True
@@ -112,17 +126,35 @@ class Settings(BaseSettings):
         "openai_model",
         "database_url",
         "otel_exporter_otlp_endpoint",
+        "auth_cookie_secure",
+        "allow_index_rebuild",
+        "seed_admin_email",
+        "seed_admin_password",
         mode="before",
     )
     @classmethod
     def _empty_is_none(cls, value: object) -> object:
         return None if value == "" else value
 
-    @field_validator("corpus_dir", "index_dir", mode="after")
+    @field_validator("corpus_dir", "index_dir", "index_store_dir", mode="after")
     @classmethod
     def _anchor_to_repo_root(cls, value: Path) -> Path:
         # Relative paths mean "relative to the repo", regardless of the working directory.
         return value if value.is_absolute() else REPO_ROOT / value
+
+    @field_validator("database_url", mode="after")
+    @classmethod
+    def _anchor_sqlite_path(cls, value: SecretStr | None) -> SecretStr | None:
+        # sqlite+aiosqlite:///relative.db → absolute under the repo root, so the API, the
+        # migration script and the seed script use the same file whatever their cwd.
+        if value is None:
+            return None
+        url = value.get_secret_value()
+        prefix, sep, path = url.partition(":///")
+        relative = path and not path.startswith(":memory:") and not Path(path).is_absolute()
+        if sep and prefix.startswith("sqlite") and relative and not path.startswith("/"):
+            return SecretStr(f"{prefix}:///{(REPO_ROOT / path).as_posix()}")
+        return value
 
     @model_validator(mode="after")
     def _check_consistency(self) -> Self:
@@ -150,6 +182,18 @@ class Settings(BaseSettings):
             if "*" in self.cors_allow_origins:
                 raise ValueError("wildcard CORS origins are not allowed in production")
         return self
+
+    @property
+    def cookie_secure(self) -> bool:
+        if self.auth_cookie_secure is not None:
+            return self.auth_cookie_secure
+        return self.app_env not in (AppEnv.DEVELOPMENT, AppEnv.TEST)
+
+    @property
+    def index_rebuild_allowed(self) -> bool:
+        if self.allow_index_rebuild is not None:
+            return self.allow_index_rebuild and self.app_env is not AppEnv.PRODUCTION
+        return self.app_env in (AppEnv.DEVELOPMENT, AppEnv.TEST)
 
 
 @lru_cache(maxsize=1)

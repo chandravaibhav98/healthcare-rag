@@ -2,14 +2,14 @@
 
 * `/healthz`: liveness. The process is up. It never checks dependencies, so a slow
   database cannot make the orchestrator restart healthy pods.
-* `/readyz`: readiness. Ready only when a verified index is loaded (and, from Phase 5, the
-  database answers). Returns 503 when not ready so load balancers drain the pod.
+* `/readyz`: readiness. Ready only when a verified index is loaded (and, when DATABASE_URL is
+  set, the database answers). Returns 503 when not ready so load balancers drain the pod.
 * `/version`: build, contract and index versions, used by the UI footer and smoke tests.
 """
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Response, status
+from fastapi import APIRouter, Request, Response, status
 
 from app import __version__
 from app.api.deps import RegistryDep
@@ -32,11 +32,13 @@ async def healthz() -> Liveness:
     summary="Readiness probe",
     responses={503: {"model": Readiness, "description": "Not ready"}},
 )
-async def readyz(response: Response, registry: RegistryDep) -> Readiness:
+async def readyz(request: Request, response: Response, registry: RegistryDep) -> Readiness:
+    db = request.app.state.db
+    database: CheckState = "not_configured" if db is None else ("ok" if await db.ping() else "fail")
     checks: dict[str, CheckState] = {
         "index": "ok" if registry.is_loaded else "fail",
-        # Persistence arrives in Phase 5; until then the database is reported, not checked.
-        "database": "not_configured",
+        # Optional (stateless mode); when configured it must answer, or the pod is drained.
+        "database": database,
     }
     ready = all(state != "fail" for state in checks.values())
     if not ready:

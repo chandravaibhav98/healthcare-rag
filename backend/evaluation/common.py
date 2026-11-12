@@ -31,12 +31,11 @@ def load_split(split: Split | str) -> list[GoldItem]:
     raise ValueError(split)
 
 
-def load_checked_index(
-    settings: Settings | None = None, index_dir: Path | None = None
-) -> LoadedIndex:
-    """Load the index and fail fast if the gold labels do not match it."""
-    settings = settings or get_settings()
-    index = load_index(index_dir or settings.index_dir)
+def check_index(index: LoadedIndex) -> str | None:
+    """Fail fast if gold labels reference chunks the index lacks (ADR-0001 §6).
+
+    Returns a warning when the index version differs from the labelled one but every
+    labelled chunk id still exists (for example a manifest-only change)."""
     pinned = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))["index_version"]
     known = {c.chunk_id for c in index.chunks}
     missing = sorted(
@@ -48,9 +47,19 @@ def load_checked_index(
             f"(labels pinned to {pinned}); re-annotate: {missing[:5]}"
         )
     if index.index_version != pinned:
-        print(
-            f"warning: index {index.index_version} differs from labelled {pinned}; ids still match"
-        )
+        return f"index {index.index_version} differs from labelled {pinned}; ids still match"
+    return None
+
+
+def load_checked_index(
+    settings: Settings | None = None, index_dir: Path | None = None
+) -> LoadedIndex:
+    """Load the index and fail fast if the gold labels do not match it."""
+    settings = settings or get_settings()
+    index = load_index(index_dir or settings.index_dir)
+    warning = check_index(index)
+    if warning:
+        print(f"warning: {warning}")
     return index
 
 

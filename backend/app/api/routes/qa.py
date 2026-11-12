@@ -6,10 +6,16 @@ and never blocks the event loop.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from starlette.concurrency import run_in_threadpool
 
-from app.api.deps import QAServiceDep, RequestIdDep, enforce_qa_rate_limit
+from app.api.deps import (
+    OptionalUserDep,
+    QAServiceDep,
+    RequestIdDep,
+    SettingsDep,
+    enforce_qa_rate_limit,
+)
 from app.api.errors import problem_responses
 from app.api.schemas.qa import QARequest, QAResponse
 
@@ -24,12 +30,24 @@ _DESCRIPTION = (
 
 
 async def answer_question(
-    body: QARequest, service: QAServiceDep, request_id: RequestIdDep
+    body: QARequest,
+    service: QAServiceDep,
+    request_id: RequestIdDep,
+    user: OptionalUserDep,
+    settings: SettingsDep,
 ) -> QAResponse:
-    return await run_in_threadpool(service.answer, body, request_id)
+    # Anonymous access is a deployment choice (ADR-0008): on for the demo, off in prod.
+    if user is None and not settings.allow_anonymous_qa:
+        raise HTTPException(
+            status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    user_id = str(user.id) if user else None
+    return await run_in_threadpool(service.answer, body, request_id, user_id)
 
 
-_RESPONSES = problem_responses(422, 429, 500, 503)
+_RESPONSES = problem_responses(401, 422, 429, 500, 503)
 _DEPS = [Depends(enforce_qa_rate_limit)]
 
 router.add_api_route(

@@ -18,8 +18,9 @@ replaced by an organisation's secure guideline repository.
 | Phase 1: synthetic corpus and deterministic indexing | ✅ 42 docs, 209 chunks, byte-identical rebuilds ([report](docs/project/phase-1-report.md)) |
 | Phase 2: retrieval and extractive QA core | ✅ Hybrid RRF + expansion, 15/15 smoke hit@5 ([report](docs/project/phase-2-report.md)) |
 | Phase 3: validation engine and `/qa` API | ✅ Live `/qa`, abstention, probes, metrics; p95 ≈ 11 ms over HTTP ([report](docs/project/phase-3-report.md)) |
-| **Phase 4: evaluation and threshold tuning** | ✅ Harness + CI gate. Held-out: SC3 met (0.807); SC2 P@5 0.417 vs ceiling 0.583 (decision pending); 2/12 false validations ([report](docs/project/phase-4-report.md), [evaluation](docs/evaluation-report.md)) |
-| Phase 5: persistence, auth and admin APIs | ⏭️ Next |
+| Phase 4: evaluation and threshold tuning | ✅ Harness + CI gate. Held-out: SC3 met (0.807); SC2 P@5 0.417 vs ceiling 0.583 (decision pending); 2/12 false validations ([report](docs/project/phase-4-report.md), [evaluation](docs/evaluation-report.md)) |
+| **Phase 5: persistence, auth and admin APIs** | ✅ SQLite/PostgreSQL, JWT + RBAC, 17 admin routes, audited runtime tuning, PHI redaction + retention ([report](docs/project/phase-5-report.md)) |
+| Phase 6: React assistant and admin dashboard | ⏭️ Next |
 
 ## Quick start
 
@@ -53,9 +54,20 @@ Details: [`plan.md`](plan.md) §2 · decisions: [`docs/adr/`](docs/adr/README.md
 
 ```bash
 scripts/build-index.sh           # once, and after any corpus change
+scripts/seed.sh --demo           # migrate the database, admin + demo accounts and history
 scripts/dev.sh --api-only        # API on http://127.0.0.1:8000, Swagger UI at /docs
 scripts/smoke.sh                 # in a second terminal: probes, both /qa paths, schema
 ```
+
+The default `DATABASE_URL` is a local SQLite file (`artifacts/app.db`). Demo accounts are
+`admin@example.org`, `reviewer@example.org` and `user@example.org`, all with
+`SEED_ADMIN_PASSWORD` (dev default `change-me-admin`). Leave `DATABASE_URL` empty to run
+`/qa` stateless.
+
+> **Upgrading from Phase 4?** An existing `.env` still points `DATABASE_URL` at
+> PostgreSQL on `localhost:5432`, which is not running yet (Phase 8). Copy the new
+> `DATABASE_URL`, `SEED_ADMIN_*` and Phase 5 keys from `.env.example`, or empty
+> `DATABASE_URL`.
 
 ```bash
 curl -s -X POST http://127.0.0.1:8000/api/v1/qa \
@@ -63,7 +75,7 @@ curl -s -X POST http://127.0.0.1:8000/api/v1/qa \
   -d '{"question": "How long can a multi-dose vial be used after opening?", "top_k": 5}'
 ```
 
-## API contract v1.1
+## API contract v1.2
 
 `POST /api/v1/qa` (alias `POST /qa`). Request `{ "question": str, "top_k": 1–20 }`.
 Response `{ answer, citations, confidence, status ∈ {validated, needs_review}, meta }`.
@@ -75,10 +87,21 @@ Response `{ answer, citations, confidence, status ∈ {validated, needs_review},
 - `meta.signals` shows the evidence behind `confidence` (coverage, query support,
   retrieval score, numeric check; [ADR-0002](docs/adr/0002-composite-confidence-and-numeric-gate.md)).
 
-Errors are RFC 9457 `application/problem+json` (422, 429, 500, 503) with a `request_id`
+Errors are RFC 9457 `application/problem+json` (401, 403, 404, 409, 422, 429, 500, 503) with a `request_id`
 that matches the `X-Request-ID` response header. Operational endpoints: `GET /healthz`,
 `GET /readyz`, `GET /version`, `GET /metrics` (Prometheus). The committed snapshot is
 [`backend/openapi.json`](backend/openapi.json).
+
+Since 1.2 (all additive):
+
+- **Auth** `POST /api/v1/auth/login`, `/refresh` (rotating, httpOnly cookie), `/logout`,
+  `GET /api/v1/auth/me`. `/qa` accepts an optional bearer token and answers 401 only when
+  `ALLOW_ANONYMOUS_QA=false`.
+- **Admin** under `/api/v1/admin` (reviewer or admin; [RBAC matrix](docs/adr/0008-persistence-auth-index-distribution.md)):
+  `stats`, `queries`, `reviews` (+ gold JSONL export), `eval-runs`, `index/versions`,
+  `index/rebuild` (development only), `documents`, `config` (audited runtime threshold and
+  weights), `audit-log`. Lists share one envelope `{items, total, limit, offset}` with
+  `limit`, `offset`, `sort`, `order`.
 
 ## Repository layout
 
@@ -105,6 +128,8 @@ that matches the `X-Request-ID` response header. Operational endpoints: `GET /he
 | `dev` | API (uvicorn `--reload`) and web (Vite) together (`--api-only`, `--web-only`) |
 | `smoke` | Probe a running API; `--bench N` adds a p95 latency check (`--base-url`) |
 | `eval` | Evaluation scorecard (SC2, SC3, false validations); `--gate` for CI, `--split test` once per frozen config |
+| `db-migrate` | Alembic migrations for `DATABASE_URL` (`--revision`, `--downgrade`, `--current`) |
+| `seed` | Migrate, then the admin account; `--demo` adds reviewer/user accounts and a week of history (`--reset`, `--reset-password`) |
 
 More scripts arrive with later phases (`plan.md` §5).
 

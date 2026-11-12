@@ -54,8 +54,14 @@ class EvidenceValidator:
         return round(float(np.clip(sims.max(), 0.0, 1.0)), 6)
 
     def validate(
-        self, question: str, answer: GeneratedAnswer, evidence: Sequence[RetrievedChunk]
+        self,
+        question: str,
+        answer: GeneratedAnswer,
+        evidence: Sequence[RetrievedChunk],
+        *,
+        weights: ConfidenceWeights | None = None,
     ) -> ValidationResult:
+        """`weights` overrides the construction-time weights (runtime tuning, Phase 5)."""
         if answer.is_empty:
             return ValidationResult(
                 coverage=0.0,
@@ -79,6 +85,6 @@ class EvidenceValidator:
             query_support=qs,
             retrieval_score=rs,
             numeric_ok=numeric.ok,
-            confidence=combine(cov, qs, rs, self._weights),
+            confidence=combine(cov, qs, rs, weights or self._weights),
             unsupported_numbers=numeric.unsupported,
         )

@@ -36,6 +36,11 @@ trap cleanup EXIT INT TERM
 if ((API)); then
   require_cmd uv "Run scripts/setup.sh first."
   [[ -f "$INDEX/manifest.json" ]] || die "No index at $INDEX. Run scripts/build-index.sh first."
+  if [[ -n "${DATABASE_URL:-}" ]]; then
+    # Local convenience only: deployments run scripts/db-migrate.* as a separate step.
+    log_step "Migrate the database (DATABASE_URL is set)"
+    run uv run --directory "$BACKEND_DIR" python scripts/db.py upgrade
+  fi
   log_step "API on http://${API_HOST:-127.0.0.1}:${API_PORT:-8000} (docs at /docs)"
   run uv run --directory "$BACKEND_DIR" uvicorn --factory app.main:create_app --reload \
     --host "${API_HOST:-127.0.0.1}" --port "${API_PORT:-8000}" &

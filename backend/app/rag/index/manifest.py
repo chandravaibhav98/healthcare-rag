@@ -54,6 +54,11 @@ def corpus_section(docs: Sequence[Document]) -> dict[str, Any]:
             "status": d.meta.status.value,
             "version": d.meta.version,
             "effective_date": d.meta.effective_date.isoformat(),
+            # Descriptive only (admin inventory, dashboard topics). Not part of the
+            # corpus hash, so adding them did not change any index_version.
+            "title": d.meta.title,
+            "topic": list(d.meta.topic),
+            "supersedes": d.meta.supersedes,
         }
         for d in sorted(docs, key=lambda d: d.path)
     ]

@@ -30,6 +30,7 @@ from app.rag.index.registry import IndexRegistry
 from app.rag.pipeline import LoadedIndex
 from app.rag.runtime import build_runtime
 from app.services.qa_service import QAOutcome, QAService
+from app.services.tuning import Tuning, TuningHolder
 from evaluation import metrics as m
 from evaluation.common import git_revision, load_checked_index, load_split, new_run_dir, write_json
 from evaluation.eval_retrieval import write_rows
@@ -69,10 +70,7 @@ def run_service(
     registry._current = build_runtime(index, settings)
     capture = _Capture()
     service = QAService(
-        registry,
-        threshold=settings.confidence_threshold,
-        retrieval_floor=settings.retrieval_floor,
-        observers=(capture,),
+        registry, tuning=TuningHolder(Tuning.from_settings(settings)), observers=(capture,)
     )
     rows: list[dict[str, Any]] = []
     for item in items:

@@ -50,6 +50,8 @@ identical flags). CI calls the same scripts, so "green locally" means "green in 
 | Run API + web locally | `scripts/dev.sh` · `pwsh scripts/dev.ps1` |
 | Smoke-test a running API (+ `--bench N`) | `scripts/smoke.sh` · `pwsh scripts/smoke.ps1` |
 | Evaluation scorecard and regression gate | `scripts/eval.sh` · `pwsh scripts/eval.ps1` |
+| Database migrations (never at API start-up) | `scripts/db-migrate.sh` · `pwsh scripts/db-migrate.ps1` |
+| Admin account and demo data | `scripts/seed.sh --demo` · `pwsh scripts/seed.ps1 --demo` |
 
 A new script must ship as a `.sh` + `.ps1` pair, support `--help`, be idempotent, and
 return non-zero on failure. Shared helpers live in `scripts/lib/`.
@@ -68,6 +70,9 @@ return non-zero on failure. Shared helpers live in `scripts/lib/`.
   **committed snapshots**. After changing a schema, run
   `uv run --directory backend python scripts/export_schemas.py` and commit the diff.
   Explain it in the PR, because a contract change is a product decision.
+- A change to `backend/app/db/models.py` needs an Alembic migration
+  (`uv run --directory backend alembic revision --autogenerate -m "..."`, then review it).
+  `tests/integration/test_migrations.py` fails when models and migrations drift.
 - `.env.example` must list every `Settings` field, each with a comment (enforced by a test).
 
 ## Dependencies

@@ -34,6 +34,11 @@ try {
     if ($api) {
         Assert-Command uv 'Run scripts/setup.ps1 first.'
         if (-not (Test-Path (Join-Path $index 'manifest.json'))) { Stop-Script "No index at $index. Run scripts/build-index.ps1 first." }
+        if ($env:DATABASE_URL) {
+            # Local convenience only: deployments run scripts/db-migrate.* as a separate step.
+            Write-Step 'Migrate the database (DATABASE_URL is set)'
+            if (-not (Invoke-Native uv @('run', '--directory', (Get-BackendDir), 'python', 'scripts/db.py', 'upgrade'))) { Stop-Script 'Migration failed.' }
+        }
         Write-Step "API on http://${apiHost}:${apiPort} (docs at /docs)"
         $procs += Start-Process uv -NoNewWindow -PassThru -ArgumentList @(
             'run', '--directory', (Get-BackendDir), 'uvicorn', '--factory', 'app.main:create_app',

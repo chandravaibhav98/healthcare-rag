@@ -18,10 +18,12 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Final
 
-from app.core.config import get_settings
+from app.core.config import Settings, get_settings
+from app.rag.pipeline import LoadedIndex
 from evaluation import eval_retrieval, eval_validation
 from evaluation.common import git_revision, load_checked_index, load_split, new_run_dir, write_json
 from evaluation.eval_retrieval import write_rows
@@ -51,6 +53,61 @@ def scorecard(retrieval: dict[str, Any], validation: dict[str, Any]) -> dict[str
         "false_validation_rate": u["false_validation_rate"]["mean"],
         "mean_confidence": a["mean_confidence"],
     }
+
+
+@dataclass(frozen=True, slots=True)
+class EvaluationResult:
+    scorecard: dict[str, Any]
+    retrieval: dict[str, Any]
+    validation: dict[str, Any]
+    curve: list[dict[str, float]]
+    retrieval_rows: list[dict[str, Any]]
+    validation_rows: list[dict[str, Any]]
+
+    def summary(self, settings: Settings, index_version: str, split: Split) -> dict[str, Any]:
+        """JSON document stored in reports and in the `eval_runs` table."""
+        return {
+            "split": split.value,
+            "index_version": index_version,
+            "git": git_revision(),
+            "scorecard": self.scorecard,
+            "retrieval": self.retrieval,
+            "validation": self.validation,
+            "threshold_curve": self.curve,
+            "config": {
+                "retrieval_mode": self.retrieval["config"]["mode"],
+                "rrf_weights": [settings.rrf_weight_dense, settings.rrf_weight_sparse],
+                "expansion": self.retrieval["config"]["expansion"],
+                "threshold": settings.confidence_threshold,
+                "weights": [
+                    settings.confidence_weight_coverage,
+                    settings.confidence_weight_query_support,
+                    settings.confidence_weight_retrieval,
+                ],
+                "retrieval_floor": settings.retrieval_floor,
+                "mmr_lambda": settings.answer_mmr_lambda,
+            },
+        }
+
+
+def evaluate_split(index: LoadedIndex, split: Split, settings: Settings) -> EvaluationResult:
+    """Run retrieval + validation + threshold curve in-process (no files written).
+
+    Shared by this CLI and the admin API's evaluation runs (Phase 5)."""
+    retrieval, ret_rows = eval_retrieval.evaluate(index, split, settings)
+    val_rows = eval_validation.run_service(index, load_split(split), settings)
+    validation = eval_validation.summarize(val_rows, settings.confidence_threshold)
+    curve = sweep(
+        val_rows,
+        (
+            settings.confidence_weight_coverage,
+            settings.confidence_weight_query_support,
+            settings.confidence_weight_retrieval,
+        ),
+    )
+    return EvaluationResult(
+        scorecard(retrieval, validation), retrieval, validation, curve, ret_rows, val_rows
+    )
 
 
 def check_gate(
@@ -94,45 +151,12 @@ def main(argv: list[str] | None = None) -> int:
     settings = get_settings()
     index = load_checked_index(settings, args.index)
     split = Split(args.split)
-    retrieval, ret_rows = eval_retrieval.evaluate(index, split, settings)
-    val_rows = eval_validation.run_service(index, load_split(split), settings)
-    validation = eval_validation.summarize(val_rows, settings.confidence_threshold)
-    curve = sweep(
-        val_rows,
-        (
-            settings.confidence_weight_coverage,
-            settings.confidence_weight_query_support,
-            settings.confidence_weight_retrieval,
-        ),
-    )
-    card = scorecard(retrieval, validation)
+    result = evaluate_split(index, split, settings)
+    card, curve = result.scorecard, result.curve
+    ret_rows, val_rows = result.retrieval_rows, result.validation_rows
 
     run_dir = new_run_dir("eval", split, index.index_version)
-    write_json(
-        run_dir / "summary.json",
-        {
-            "split": split.value,
-            "index_version": index.index_version,
-            "git": git_revision(),
-            "scorecard": card,
-            "retrieval": retrieval,
-            "validation": validation,
-            "threshold_curve": curve,
-            "config": {
-                "retrieval_mode": retrieval["config"]["mode"],
-                "rrf_weights": [settings.rrf_weight_dense, settings.rrf_weight_sparse],
-                "expansion": retrieval["config"]["expansion"],
-                "threshold": settings.confidence_threshold,
-                "weights": [
-                    settings.confidence_weight_coverage,
-                    settings.confidence_weight_query_support,
-                    settings.confidence_weight_retrieval,
-                ],
-                "retrieval_floor": settings.retrieval_floor,
-                "mmr_lambda": settings.answer_mmr_lambda,
-            },
-        },
-    )
+    write_json(run_dir / "summary.json", result.summary(settings, index.index_version, split))
     write_rows(run_dir / "retrieval_per_query.csv", ret_rows)
     write_rows(run_dir / "validation_per_query.csv", val_rows)
     write_rows(

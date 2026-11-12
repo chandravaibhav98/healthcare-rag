@@ -88,3 +88,22 @@ unlabelled chunks were inspected once (Phase 4 audit) and left unlabelled.
 * **Corpus authored after the questions** (v2); see the corpus card §2a.
 * **Ceilings differ** between dev and test, so raw P@5 is not comparable across them;
   P@5 as a share of its ceiling is (0.73 dev, 0.72 test-v1, 0.72 test-v2).
+
+## 7. Feedback loop (Phase 5)
+
+Reviewers can mark a reviewed query with `promote_to_gold`. `GET
+/api/v1/admin/reviews/export/gold.jsonl` returns those items as **candidates** in the
+`gold_source.yaml` item format, plus a `source` block (query id, verdict, note, index
+version, redaction count):
+
+| Verdict | Candidate |
+| --- | --- |
+| approve | `g2` = the chunks the answer cited |
+| correct | `g2` = the reviewer's corrected chunk ids |
+| reject | `g2` = corrected ids if given, otherwise `kind: unanswerable` |
+
+Candidates are not gold yet. Before an item joins `gold_source.yaml` an annotator must
+(1) check `g2` against §4, (2) add `g1` labels, (3) set `kind` and `kw`, and (4) make sure
+the question is not a near-duplicate of a test item. Questions are redacted (ADR-0009),
+so a candidate whose meaning depends on a replaced value is dropped. Promoted items go
+to the **dev** pool only; held-out test sets are written separately (§5).

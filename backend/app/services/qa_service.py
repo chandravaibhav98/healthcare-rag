@@ -28,6 +28,7 @@ from app.api.schemas.qa import (
 from app.domain.models import GeneratedAnswer, RetrievedChunk
 from app.rag.index.registry import IndexRegistry
 from app.rag.validation.confidence import decide
+from app.services.tuning import Tuning, TuningHolder
 
 #: Candidate sources returned with an abstention (ADR-0007).
 CANDIDATE_SOURCES: Final = 3
@@ -40,6 +41,7 @@ class QAOutcome:
 
     request_id: str
     question: str
+    user_id: str | None
     top_k: int
     response: QAResponse
     candidate_answer: str | None  # withheld answer text on abstention (reviewers only, ADR-0007)
@@ -71,27 +73,34 @@ class QAService:
         self,
         registry: IndexRegistry,
         *,
-        threshold: float,
-        retrieval_floor: float,
+        threshold: float | None = None,
+        retrieval_floor: float | None = None,
+        tuning: TuningHolder | None = None,
         observers: Sequence[QAObserver] = (),
         clock: Callable[[], float] = time.perf_counter,
     ) -> None:
+        """Pass a `TuningHolder` for runtime-tunable values (the API does), or fixed
+        `threshold`/`retrieval_floor` with the default weights (CLI, evaluation, tests)."""
+        if tuning is None:
+            if threshold is None or retrieval_floor is None:
+                raise ValueError("give either tuning= or threshold= and retrieval_floor=")
+            tuning = TuningHolder(Tuning(threshold=threshold, retrieval_floor=retrieval_floor))
         self._registry = registry
-        self._threshold = threshold
-        self._floor = retrieval_floor
+        self._tuning = tuning
         self._observers = tuple(observers)
         self._clock = clock
 
-    def answer(self, request: QARequest, request_id: str) -> QAResponse:
+    def answer(self, request: QARequest, request_id: str, user_id: str | None = None) -> QAResponse:
         started = self._clock()
         runtime = self._registry.current()  # one immutable snapshot for the whole request
+        tuning = self._tuning.get()  # likewise for the decision parameters
         hits = runtime.retriever.retrieve(request.question, request.top_k)
         relevance = runtime.validator.relevance(request.question, hits)
 
         generated: GeneratedAnswer | None = None
         reason: AbstentionReason | None
         unsupported: tuple[str, ...]
-        if hits and relevance >= self._floor:
+        if hits and relevance >= tuning.retrieval_floor:
             generated = runtime.generator.generate(request.question, hits)
 
         if generated is None:
@@ -103,12 +112,14 @@ class QAService:
             )
             status, confidence, unsupported = QAStatus.NEEDS_REVIEW, 0.0, ()
         else:
-            result = runtime.validator.validate(request.question, generated, hits)
+            result = runtime.validator.validate(
+                request.question, generated, hits, weights=tuning.weights
+            )
             status, reason = decide(
                 answer_empty=generated.is_empty,
                 confidence=result.confidence,
                 numeric_ok=result.numeric_ok,
-                threshold=self._threshold,
+                threshold=tuning.threshold,
             )
             signals = Signals(
                 coverage=result.coverage,
@@ -154,6 +165,7 @@ class QAService:
             QAOutcome(
                 request_id=request_id,
                 question=request.question,
+                user_id=user_id,
                 top_k=request.top_k,
                 response=response,
                 candidate_answer=candidate,

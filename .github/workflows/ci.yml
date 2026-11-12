@@ -42,6 +42,9 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
+      # Linux: the PostgreSQL variants of the persistence tests run in a Testcontainers
+      # container (the runner has Docker). Windows runners cannot run Linux containers, so
+      # they cover SQLite only; the code under test is identical.
       - name: Setup + lint + test (bash)
         if: runner.os != 'Windows'
         run: bash scripts/setup.sh --ci
@@ -49,9 +52,11 @@ jobs:
       - name: Setup + lint + test (PowerShell)
         if: runner.os == 'Windows'
         shell: pwsh
+        env:
+          SKIP_POSTGRES_TESTS: "1"
         run: ./scripts/setup.ps1 --ci
 
-      - name: Backend coverage
+      - name: Backend coverage (SQLite + PostgreSQL)
         if: runner.os != 'Windows'
         run: bash scripts/test.sh --backend --coverage --ci
 

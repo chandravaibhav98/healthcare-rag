@@ -35,6 +35,9 @@ class Metrics:
             buckets=LATENCY_BUCKETS,
             registry=r,
         )
+        self.qa_log_dropped = Counter(
+            "qa_log_dropped", "Query-log rows dropped (queue full or DB error).", registry=r
+        )
         self.index_info = Gauge(
             "rag_index_info",
             "Active index version (value is always 1).",

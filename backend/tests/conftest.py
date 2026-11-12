@@ -12,6 +12,10 @@ from app.core.config import Settings
 from app.main import create_app
 from app.rag.index.registry import IndexRegistry
 from app.rag.runtime import build_runtime
+from tests.support import AuthedClient
+
+# Database fixtures (SQLite template, PostgreSQL via TEST_DATABASE_URL or Testcontainers).
+pytest_plugins = ["tests.persistence"]
 
 FIXTURE_CORPUS = Path(__file__).parent / "fixtures" / "corpus"
 
@@ -19,8 +23,14 @@ AppFactory = Callable[..., FastAPI]
 
 
 def make_settings(**overrides: Any) -> Settings:
-    """Test settings: no .env, deterministic defaults, generous rate limit."""
-    base: dict[str, Any] = {"rate_limit_qa": "10000/minute", "log_format": "console"}
+    """Test settings: no .env, deterministic defaults, generous rate limit, and no
+    database unless a test asks for one (a developer's exported DATABASE_URL must not leak
+    into stateless tests)."""
+    base: dict[str, Any] = {
+        "rate_limit_qa": "10000/minute",
+        "log_format": "console",
+        "database_url": "",
+    }
     base.update(overrides)
     return Settings(_env_file=None, **base)
 
@@ -95,3 +105,50 @@ def corpus_index_dir(tmp_path_factory: pytest.TempPathFactory) -> Path:
     out = tmp_path_factory.mktemp("corpus-index") / "index"
     build_index(REPO_ROOT / "corpus", out)
     return out
+
+
+# --- Phase 5: persistence, users and authenticated clients ---------------------------------
+
+
+@pytest.fixture(autouse=True, scope="session")
+def _fast_password_hashing() -> Iterator[None]:
+    """Argon2 at minimum cost in tests: the production parameters cost ~50 ms per hash on
+    purpose, which would dominate the suite (every API test logs in three personas). The
+    algorithm (argon2id) and the code paths are unchanged; only the cost parameters drop."""
+    from argon2 import PasswordHasher
+
+    from app.core import security
+
+    original = security._hasher
+    security._hasher = PasswordHasher(time_cost=1, memory_cost=8, parallelism=1)
+    yield
+    security._hasher = original
+
+
+@pytest.fixture
+def db_app_factory(
+    app_factory: AppFactory, tmp_path: Path, fixture_corpus: Path
+) -> Callable[..., FastAPI]:
+    def factory(url: str, **overrides: Any) -> FastAPI:
+        overrides.setdefault("index_store_dir", tmp_path / "indexes")
+        overrides.setdefault("corpus_dir", fixture_corpus)
+        overrides.setdefault("login_rate_limit", "10000/minute")
+        return app_factory(database_url=url, **overrides)
+
+    return factory
+
+
+@pytest.fixture
+def api(db_app_factory: Callable[..., FastAPI], database_url: str) -> Iterator[AuthedClient]:
+    """App with a database (SQLite and PostgreSQL) plus one account per role."""
+    with TestClient(db_app_factory(database_url)) as client:
+        yield AuthedClient.create(client)
+
+
+@pytest.fixture
+def lite_api(
+    db_app_factory: Callable[..., FastAPI], sqlite_database_url: str
+) -> Iterator[AuthedClient]:
+    """Same as `api`, SQLite only (engine-independent behaviour, e.g. the RBAC matrix)."""
+    with TestClient(db_app_factory(sqlite_database_url)) as client:
+        yield AuthedClient.create(client)

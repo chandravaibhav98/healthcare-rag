@@ -422,21 +422,23 @@ Even with a synthetic corpus, users could type real patient information into que
 
 **Deliverables checklist**
 
-- [ ] SQLAlchemy models, repositories and Alembic migrations, with `scripts/db-migrate.*` and `scripts/seed.*` (admin user and demo data)
-- [ ] Auth: `/api/v1/auth/login`, `/refresh`, `/me`; Argon2 password hashing; JWT; RBAC dependency `require_role(...)`
-- [ ] Admin routes (all paginated, filterable and sortable):
-  - [ ] `GET /admin/stats?from&to` (volume, pass rate, mean confidence, abstention rate, p50/p95 latency, top topics, trend series)
-  - [ ] `GET /admin/queries`, `GET /admin/queries/{id}`
-  - [ ] `GET /admin/reviews?status=pending`, `POST /admin/reviews/{query_id}`
-  - [ ] `GET /admin/eval-runs`, `POST /admin/eval-runs` (async trigger), `GET /admin/eval-runs/{id}`
-  - [ ] `GET /admin/index/versions`, `POST /admin/index/versions/{v}/activate`, `POST /admin/index/rebuild` (dev only)
-  - [ ] `GET /admin/documents` (corpus inventory with chunk counts)
-  - [ ] `GET/PUT /admin/config` (threshold and weights, audited)
-  - [ ] `GET /admin/audit-log`
-- [ ] PHI-redaction hook and retention purge job
-- [ ] Integration tests against Postgres via Testcontainers, plus RBAC matrix tests (each role × endpoint)
+- [x] SQLAlchemy models, repositories and Alembic migrations, with `scripts/db-migrate.*` and `scripts/seed.*` (admin user and demo data)
+- [x] Auth: `/api/v1/auth/login`, `/refresh`, `/me`; Argon2 password hashing; JWT; RBAC dependency `require_role(...)`
+- [x] Admin routes (all paginated, filterable and sortable):
+  - [x] `GET /admin/stats?from&to` (volume, pass rate, mean confidence, abstention rate, p50/p95 latency, top topics, trend series)
+  - [x] `GET /admin/queries`, `GET /admin/queries/{id}`
+  - [x] `GET /admin/reviews?status=pending`, `POST /admin/reviews/{query_id}`
+  - [x] `GET /admin/eval-runs`, `POST /admin/eval-runs` (async trigger), `GET /admin/eval-runs/{id}`
+  - [x] `GET /admin/index/versions`, `POST /admin/index/versions/{v}/activate`, `POST /admin/index/rebuild` (dev only)
+  - [x] `GET /admin/documents` (corpus inventory with chunk counts)
+  - [x] `GET/PUT /admin/config` (threshold and weights, audited)
+  - [x] `GET /admin/audit-log`
+- [x] PHI-redaction hook and retention purge job
+- [x] Integration tests against Postgres via Testcontainers, plus RBAC matrix tests (each role × endpoint)
 
 **Exit criteria:** every admin endpoint is covered by tests, and the RBAC matrix is green.
+
+**Status (2026-11-13):** ✅ done. Admin routes live under `/api/v1/admin/...`; tests run on SQLite and PostgreSQL. See `docs/project/phase-5-report.md`.
 
 ---
 
@@ -766,12 +768,15 @@ owning phase · 🟢 tracked, low risk
 
 | # | Issue | Owner | Status |
 | --- | --- | --- | --- |
-| OI-11 | Rate limiting is per process; several replicas need a shared store (Redis) behind the same `TokenBucketLimiter` interface | Phase 8/9 (ADR-0008) | 🟢 |
-| OI-12 | The query log is a structured log line until PostgreSQL exists; candidate answers reach reviewers only via logs with `LOG_QUESTION_TEXT=true` | Phase 5 | 🟢 |
+| OI-11 | Rate limiting (`/qa` and, since Phase 5, login) is per process; several replicas need a shared store (Redis) behind the same `TokenBucketLimiter` interface | Phase 8/9 (ADR-0008) | 🟢 |
 | OI-13 | The community ingress-nginx controller is retired: verify current status and prefer Gateway API | Phase 9 | 🟢 |
 | OI-14 | npm `overrides` pins `minimatch` 11.0.5 for a Dependabot advisory; remove the override once the dependents ship a fixed range | Any phase, on Dependabot updates | 🟢 |
 | OI-15 | Phase 0 shell scripts are committed as mode `100644`. CI calls them with `bash`, so nothing breaks, but `./scripts/x.sh` fails on Linux/macOS. Fix: `git update-index --chmod=+x scripts/*.sh` | Any phase | 🟢 |
 | OI-16 | Housekeeping: delete the `_staging/` folder in the old outer project folder (verification tarballs only) | Owner, manual | 🟢 |
+| OI-23 | Promoted reviews export as gold **candidates** (JSONL); merging them into `gold_source.yaml` is manual (DATASET_CARD §7). A small `evaluation.import_candidates --check` would make it repeatable | Phase 6/7 | 🟢 |
+| OI-24 | ADR-0008 names an `AuthProvider` protocol for OIDC; only local accounts exist. Needed before connecting the organisation's identity provider | Phase 12 (RUNBOOK) or later | 🟢 |
+| OI-25 | `/admin/stats` aggregates in Python from one windowed query; fine to about 1M rows per window, then move to SQL aggregates or a daily rollup table | When volume requires | 🟢 |
+| OI-26 | Windows CI cannot run Linux containers, so the PostgreSQL test variants run on Linux only (SQLite runs on both) | Phase 10 | 🟢 |
 
 Closed in Phase 4 (outcomes in `docs/project/phase-4-report.md` §4): OI-3, OI-4, OI-5,
-OI-6, OI-7.
+OI-6, OI-7. Closed in Phase 5 (`docs/project/phase-5-report.md` §4): OI-12.

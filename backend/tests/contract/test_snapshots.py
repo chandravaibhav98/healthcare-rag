@@ -39,8 +39,11 @@ def test_openapi_response_schema_keeps_the_four_spec_fields() -> None:
     doc = json.loads(render_openapi())
     qa_response = doc["components"]["schemas"]["QAResponse"]
     assert set(qa_response["required"]) == {"answer", "citations", "confidence", "status"}
-    # 1.1.0: additive only (Citation.superseded, documented 429/500/503), so minor bump.
-    assert doc["info"]["version"] == "1.1.0"
+    # 1.1.0: Citation.superseded. 1.2.0: auth + admin routes and a documented 401 on /qa
+    # (only when ALLOW_ANONYMOUS_QA=false). All additive, so minor bumps (ADR-0006).
+    assert doc["info"]["version"] == "1.2.0"
+    for path in ("/qa", "/api/v1/qa", "/healthz", "/readyz", "/version"):
+        assert path in doc["paths"], f"{path} must survive every 1.x release"
     assert "superseded" not in doc["components"]["schemas"]["Citation"].get("required", [])
 
 

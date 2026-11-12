@@ -19,7 +19,7 @@ from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_vali
 
 from app.domain.ids import CHUNK_ID_PATTERN, DOC_ID_PATTERN, INDEX_VERSION_PATTERN
 
-CONTRACT_VERSION: Final = "1.1.0"  # 1.1: additive Citation.superseded (ADR-0006, ADR-0010)
+CONTRACT_VERSION: Final = "1.2.0"  # 1.2: additive auth + admin routes, 401 on /qa (Phase 5)
 
 #: Fixed answer text when abstaining (ADR-0007). Clients may rely on it verbatim.
 ABSTENTION_MESSAGE: Final = (

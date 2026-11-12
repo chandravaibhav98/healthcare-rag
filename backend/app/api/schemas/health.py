@@ -18,7 +18,7 @@ class Readiness(BaseModel):
     model_config = ConfigDict(extra="forbid")
     status: Literal["ready", "not_ready"]
     checks: dict[str, CheckState] = Field(
-        description="Per-dependency state: `index` (loaded and verified), `database` (Phase 5)."
+        description="Per-dependency state: `index` (loaded and verified), `database` (`not_configured` when DATABASE_URL is unset)."
     )
     index_version: str | None = None
 
