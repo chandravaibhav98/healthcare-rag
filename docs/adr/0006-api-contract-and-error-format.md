@@ -1,6 +1,6 @@
 # ADR-0006 — API contract strictness, additive `meta`, RFC 9457 errors
 
-- **Status:** Proposed (implemented as contract v1 in Phase 0)
+- **Status:** Proposed (contract v1.0 in Phase 0; **v1.1** in Phase 3, see Amendment 1)
 - **Date:** 2026-11-07
 - **Plan ref:** `plan.md` §3 ADR-006 · **Affects:** SC4, D1
 
@@ -29,6 +29,28 @@ ID, index version, signals) without breaking that contract.
 6. The contract is **snapshot-tested**: `backend/openapi.json` is committed, and CI and
    pre-commit fail if the code and the snapshot differ (`scripts/export_schemas.py --check`).
 
+## Amendment 1 (Phase 3): contract 1.1.0, additive only
+
+| Change | Why | Compatibility |
+| --- | --- | --- |
+| `Citation.superseded: bool = false` | ADR-0010: a superseded guideline may be shown as a candidate source but never as answer text; the UI badges it | Optional field, default false |
+| `ProblemDetails.request_id` is now always filled | Correlates a client error with the server log line | Already in v1.0 as optional |
+| 429 (rate limit) with `Retry-After` | Abuse protection per client (own token bucket, ADR note below) | New documented error |
+| 503 (index not loaded) with `Retry-After: 5` | Fail closed while an index loads or after a failed load | New documented error |
+| 500 as a generic problem without internals | The traceback goes to the log, never to the client | New documented error |
+| The Phase 0 `501` is gone | The pipeline exists | Clients never relied on it |
+
+The version is **1.1.0** (minor): nothing was removed or renamed and the four brief
+fields are unchanged. `GET /healthz`, `GET /readyz` (503 with its own JSON body when not
+ready) and `GET /version` are documented in OpenAPI; `GET /metrics` (Prometheus text) is
+deliberately left out of the public contract.
+
+**Rate limiting.** `slowapi`, named in the plan, was replaced by a 60-line token bucket
+(`app/core/rate_limit.py`): typed, an injectable clock for deterministic tests, no
+decorator that rewrites handler signatures, bounded memory. Limits are per process;
+with several replicas the bucket store moves to Redis behind the same interface
+(ADR-0008).
+
 ## Consequences
 
 - **Positive:** clients and the generated TypeScript client have a single, stable shape;
@@ -39,4 +61,5 @@ ID, index version, signals) without breaking that contract.
 ## Verification
 
 `tests/unit/test_qa_contract.py`, `tests/api/test_qa_routes.py` and
-`tests/contract/test_snapshots.py` (Phase 0); Schemathesis fuzzing (Phase 7).
+`tests/contract/test_snapshots.py` (Phase 0); `tests/api/test_platform.py` (Phase 3:
+probes, headers, CORS, metrics); Schemathesis fuzzing (Phase 7).

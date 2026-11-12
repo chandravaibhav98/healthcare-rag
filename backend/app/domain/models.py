@@ -183,3 +183,4 @@ class ValidationResult:
     retrieval_score: float
     numeric_ok: bool
     confidence: float
+    unsupported_numbers: tuple[str, ...] = ()

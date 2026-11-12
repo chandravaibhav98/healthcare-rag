@@ -46,6 +46,23 @@ class QueryExpander:
                     added.append(text)
         return ExpandedQuery(original=question, added_terms=tuple(added))
 
+    def matched_groups(self, question: str) -> list[MatchedGroup]:
+        tokens = word_tokens(question)
+        out: list[MatchedGroup] = []
+        for group in self.groups:
+            matched = tuple(p for p in group if _contains(tokens, p))
+            if matched:
+                out.append(MatchedGroup(matched=matched, members=group))
+        return out
+
+
+@dataclass(frozen=True, slots=True)
+class MatchedGroup:
+    """A synonym/acronym group that a question mentions (used by query support)."""
+
+    matched: tuple[tuple[str, ...], ...]  # phrases from the group found in the question
+    members: tuple[tuple[str, ...], ...]  # every phrase in the group
+
 
 @cache
 def _load(path: Path) -> QueryExpander:

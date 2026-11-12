@@ -22,6 +22,18 @@ Questions therefore have to be treated as potentially containing PHI.
 5. Logs never contain secrets. `SecretStr` is used for keys, and `detect-secrets` runs in
    pre-commit and CI.
 
+## Implementation status (Phase 3)
+
+- The query log is a structured log event (`qa.completed`) written by
+  `QueryLogObserver`. It always carries status, reason, confidence, signals, cited chunk
+  IDs, latency and index version. The **question and the withheld candidate answer are
+  included only when `LOG_QUESTION_TEXT=true`**.
+- The HTTP access log (`http.request`) records method, route template, status and
+  duration. It never logs the query string, headers or the body.
+- API responses carry `Cache-Control: no-store`, so answers to possibly patient-related
+  questions are not kept in browser or proxy caches.
+- Prometheus labels are bounded (status, reason, route template), never question text.
+
 ## Consequences
 
 - **Positive:** reduces the impact of accidental PHI entry; production misconfiguration
@@ -31,4 +43,5 @@ Questions therefore have to be treated as potentially containing PHI.
 
 ## Verification
 
-Phase 0 config and API tests; Phase 5 redaction unit tests with a PHI fixture set.
+Phase 0 config and API tests; Phase 3 header tests (`tests/api/test_platform.py`);
+Phase 5 redaction unit tests with a PHI fixture set.

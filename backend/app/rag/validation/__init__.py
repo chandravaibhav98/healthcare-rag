@@ -1,1 +1,1 @@
-"""Coverage, numeric and confidence validation (Phase 3)."""
+"""Validation and confidence engine (Phase 3, ADR-0002)."""

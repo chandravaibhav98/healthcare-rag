@@ -1,7 +1,8 @@
 # ADR-0002 — Composite confidence score with a numeric-consistency gate
 
-- **Status:** Proposed. **Approval required before Phase 0 can close** (readiness Q2)
-- **Date:** 2026-11-07
+- **Status:** Proposed. **Approval required** (readiness Q2). Implemented in Phase 3 as
+  revised below.
+- **Date:** 2026-11-07 · **Revised:** 2026-11-12 (Phase 3 evidence, see "Revision 1")
 - **Deciders:** project owner (proposer), mentor or stakeholder (approver)
 - **Plan ref:** `plan.md` §2.2, §3 ADR-002, §4 Phases 3–4
 - **Affects success criteria:** SC3 (≥ 80% validation pass rate at threshold 0.6)
@@ -42,11 +43,14 @@ C(x)  = content tokens of text x: NFC, lower-case, punctuation stripped, stop-wo
 E     = concatenated text of the chunks the answer cites.
 
 coverage        = |C(answer) ∩ C(E)| / |C(answer)|                  (0 if the answer is empty)
-query_support   = |K(question) ∩ C(E)| / |K(question)|
-                  K = content tokens of the question; a term also counts as supported
-                  if its acronym/synonym expansion appears in E (ADR-0004 map)
-retrieval_score = max over cited chunks of  rrf_score / rrf_max,
-                  rrf_max = n_retrievers / (k + 1)  (= 2/61 for dense + BM25, k = 60)
+query_support   = Σ idf(t), t ∈ K(question) ∩ C(E)  /  Σ idf(t), t ∈ K(question)
+                  K = content tokens of the question minus answer-type phrases
+                  ("how long/often/soon/many/much/quickly/frequently"); a term also
+                  counts as supported if an acronym/synonym alternative of its phrase
+                  appears in full in E (ADR-0004 map). idf = corpus BM25 IDF; a term
+                  the corpus has never seen gets the maximum IDF.        [revised]
+retrieval_score = max over cited chunks of cosine(embed(expanded question), embed(chunk)),
+                  clipped to [0, 1] (the same 256-D hashed space as the index) [revised]
 numeric_ok      = every numeric token in the answer also appears in E
 ```
 
@@ -56,11 +60,17 @@ numeric_ok      = every numeric token in the answer also appears in E
 confidence = w_cov·coverage + w_qs·query_support + w_ret·retrieval_score
              defaults (.env): w = (0.40, 0.35, 0.25), sum enforced = 1.0
 
-status = validated     iff  confidence ≥ τ (CONFIDENCE_THRESHOLD = 0.6)
-                            AND numeric_ok
-                            AND retrieval_score ≥ RETRIEVAL_FLOOR
-         needs_review  otherwise, with meta.reason ∈ {no_evidence, below_retrieval_floor,
-                                                       numeric_mismatch, low_confidence}
+relevance = max over the top-k hits of the same cosine as retrieval_score
+
+if no hits                        → needs_review (no_evidence)
+if relevance < RETRIEVAL_FLOOR    → needs_review (below_retrieval_floor), confidence 0,
+                                    nothing is generated                       [revised]
+otherwise generate, then:
+status = validated     iff  confidence ≥ τ (CONFIDENCE_THRESHOLD = 0.6) AND numeric_ok
+         needs_review  otherwise, reason = numeric_mismatch | low_confidence
+                       (most specific first; an empty answer is no_evidence)
+
+RETRIEVAL_FLOOR = 0.15 (absolute cosine)                                         [revised]
 ```
 
 ### Worked examples (defaults)
@@ -85,6 +95,54 @@ rather than leaving it hidden in the weights.
   data justifies a change, and the reason is documented either way.
 - The report includes a sensitivity table (±0.1 per weight) and a reliability diagram.
 
+## Revision 1 (2026-11-12): Phase 3 evidence
+
+Implementing the validator exposed two problems with the original signal definitions.
+The revision changes **how two signals are computed and where the floor is applied**.
+The decision itself (option B, the weights 0.40/0.35/0.25 and τ = 0.6) is unchanged:
+weights and τ are still tuned only in Phase 4, on the dev split.
+
+**1. `retrieval_score` was rank-based and could not detect "no answer".** RRF only sees
+ranks, and the top hit of *any* question has rank 1 in at least one retriever. On the
+probe set the normalised RRF score of the top hit had a median of **1.00 for in-scope and
+0.94 for out-of-scope** questions, so it carried almost no information. An absolute
+similarity does: the cosine between the expanded question and the best chunk separated
+in-scope from out-of-scope questions with **AUC 0.91** (query support: AUC 0.85). The
+floor moved before generation, because there is nothing worth extracting below it, and
+the response then says why (`below_retrieval_floor`) with confidence 0.
+
+**2. Unweighted query support let generic words carry off-topic questions.** "Recommended
+dose of ibuprofen for back pain?" reached 0.60 support from "recommended", "dose" and
+"pain", which all occur in vaccine guidance, although the one specific term,
+"ibuprofen", is absent. IDF weighting is the standard remedy: rare terms decide.
+
+Probe results with the default weights and τ = 0.6 (smoke questions plus a few phrasing
+variants and off-topic questions; **not** the gold set, which is built in Phase 4). The
+original RRF-based score is not listed: with a top-hit median of 0.94 even off-topic, its
+floor could not reject anything, so it was dropped before a full run.
+
+| Configuration | In-scope validated | Out-of-scope falsely validated |
+| --- | --- | --- |
+| Cosine retrieval score, floor 0.15 before generation | 15/15 | 2/10 |
+| ... plus IDF-weighted query support (**adopted**) | 20/20 | 2/12 |
+| ... with weights (0.20, 0.45, 0.35) instead of the defaults | 15/15 | 0/10 |
+
+The probe set grew between runs (15 + 10, then 20 + 12). On the larger set the
+unweighted variant scores 20/20 and **3/12**, so IDF weighting removed one false
+validation ("income tax return") without losing an in-scope answer.
+
+The reweighted row is **not adopted**: it was chosen by looking at these very questions,
+which is the overfitting the tuning protocol forbids. It is recorded as a hypothesis for
+the Phase 4 dev-split search.
+
+**Known residual (input for Phase 4).** The two remaining false validations are medication
+questions ("ibuprofen dose", "statin side effects") whose generic terms match vaccine
+content. Every out-of-scope probe question contains at least one key term that never
+occurs in the corpus, while only 3 of 20 in-scope questions do ("order", "stick", "shot",
+all everyday synonyms of corpus terms). An "unknown key term" penalty plus the matching
+synonym-map entries is the leading candidate; it must be evaluated on the dev split, not
+added on the strength of this probe.
+
 ## Consequences
 
 - **Positive:** the pass rate becomes meaningful, abstention actually happens, and every
@@ -101,7 +159,10 @@ rather than leaving it hidden in the weights.
 - Contract (Phase 0): `QAResponse` rejects `validated` without citations or with
   `numeric_ok = false`; `meta.abstained` ⇔ `needs_review`; `reason` ⇔ abstained.
 - Config (Phase 0): the weights must sum to 1.0; τ, floor ∈ [0, 1].
-- Phase 3: property-based tests (coverage ∈ [0, 1], monotonic, empty answer → 0).
+- Phase 3 ✅: property-based tests (`tests/unit/test_validation_properties.py`: coverage
+  ∈ [0, 1], monotonic in evidence, empty answer → 0; numeric check; confidence bounded
+  and monotonic), unit tests for every signal and reason, API tests for both paths, and
+  a real-corpus regression test (`tests/integration/test_qa_corpus.py`).
 - Phase 4: pass rate ≥ 0.80 (answerable, test) and false-validation ≤ 5% as CI gates.
 
 ## Approval

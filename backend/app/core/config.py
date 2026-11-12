@@ -69,7 +69,8 @@ class Settings(BaseSettings):
     rrf_k: int = Field(default=60, ge=1)
     retrieval_candidate_k: int = Field(default=50, ge=1, le=500)
     query_expansion_enabled: bool = True
-    retrieval_floor: float = Field(default=0.0, ge=0.0, le=1.0)
+    # Absolute cosine(question, best evidence chunk); below it → abstain before generation.
+    retrieval_floor: float = Field(default=0.15, ge=0.0, le=1.0)
     answer_max_sentences: int = Field(default=3, ge=1, le=10)
     answer_mmr_lambda: float = Field(default=0.7, ge=0.0, le=1.0)
     answer_min_relative_score: float = Field(default=0.5, ge=0.0, le=1.0)

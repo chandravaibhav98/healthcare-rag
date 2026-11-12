@@ -19,7 +19,13 @@ from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_vali
 
 from app.domain.ids import CHUNK_ID_PATTERN, DOC_ID_PATTERN, INDEX_VERSION_PATTERN
 
-CONTRACT_VERSION: Final = "1.0.0"
+CONTRACT_VERSION: Final = "1.1.0"  # 1.1: additive Citation.superseded (ADR-0006, ADR-0010)
+
+#: Fixed answer text when abstaining (ADR-0007). Clients may rely on it verbatim.
+ABSTENTION_MESSAGE: Final = (
+    "The indexed guidelines do not contain sufficient evidence to answer this confidently. "
+    "Please consult the cited sources or escalate for review."
+)
 
 QUESTION_MIN_LEN: Final = 3
 QUESTION_MAX_LEN: Final = 1000
@@ -87,6 +93,10 @@ class Citation(BaseModel):
         min_length=1, max_length=2000, description="Evidence text shown to the user."
     )
     score: UnitFloat = Field(description="Normalised retrieval score of this chunk.")
+    superseded: bool = Field(
+        default=False,
+        description="The source document has been replaced by a newer version (ADR-0010).",
+    )
 
 
 class Signals(BaseModel):

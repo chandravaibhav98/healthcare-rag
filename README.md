@@ -16,8 +16,9 @@ replaced by an organisation's secure guideline repository.
 | Pre-Phase 0: initialisation | ✅ [readiness report](docs/project/phase-0-readiness.md) |
 | Phase 0: foundations, contracts and decisions | ✅ Built and verified · ⏳ ADR-0001 and ADR-0002 awaiting approval ([report](docs/project/phase-0-report.md)) |
 | Phase 1: synthetic corpus and deterministic indexing | ✅ 42 docs, 209 chunks, byte-identical rebuilds ([report](docs/project/phase-1-report.md)) |
-| **Phase 2: retrieval and extractive QA core** | ✅ Hybrid RRF + expansion, 15/15 smoke hit@5 ([report](docs/project/phase-2-report.md)) |
-| Phase 3: validation engine and `/qa` API | ⏭️ Next |
+| Phase 2: retrieval and extractive QA core | ✅ Hybrid RRF + expansion, 15/15 smoke hit@5 ([report](docs/project/phase-2-report.md)) |
+| **Phase 3: validation engine and `/qa` API** | ✅ Live `/qa`, abstention, probes, metrics; p95 ≈ 11 ms over HTTP ([report](docs/project/phase-3-report.md)) |
+| Phase 4: evaluation and threshold tuning | ⏭️ Next |
 
 ## Quick start
 
@@ -47,13 +48,36 @@ React SPA ──HTTPS/JSON──► FastAPI (stateless) ──► RAG domain lib
 
 Details: [`plan.md`](plan.md) §2 · decisions: [`docs/adr/`](docs/adr/README.md).
 
-## API contract v1
+## Run it
+
+```bash
+scripts/build-index.sh           # once, and after any corpus change
+scripts/dev.sh --api-only        # API on http://127.0.0.1:8000, Swagger UI at /docs
+scripts/smoke.sh                 # in a second terminal: probes, both /qa paths, schema
+```
+
+```bash
+curl -s -X POST http://127.0.0.1:8000/api/v1/qa \
+  -H 'Content-Type: application/json' \
+  -d '{"question": "How long can a multi-dose vial be used after opening?", "top_k": 5}'
+```
+
+## API contract v1.1
 
 `POST /api/v1/qa` (alias `POST /qa`). Request `{ "question": str, "top_k": 1–20 }`.
-Response `{ answer, citations, confidence, status ∈ {validated, needs_review}, meta? }`.
-Errors are RFC 9457 `application/problem+json`. The committed snapshot is
-[`backend/openapi.json`](backend/openapi.json). In Phase 0 the route validates requests
-and returns `501`; the pipeline arrives in Phase 3.
+Response `{ answer, citations, confidence, status ∈ {validated, needs_review}, meta }`.
+
+- `validated`: the answer is extracted from the cited guideline text, with `[n]` markers.
+- `needs_review`: the answer is withheld and replaced by a fixed message; `citations`
+  still lists up to 3 candidate sources and `meta.reason` says why
+  (`no_evidence`, `below_retrieval_floor`, `numeric_mismatch`, `low_confidence`).
+- `meta.signals` shows the evidence behind `confidence` (coverage, query support,
+  retrieval score, numeric check; [ADR-0002](docs/adr/0002-composite-confidence-and-numeric-gate.md)).
+
+Errors are RFC 9457 `application/problem+json` (422, 429, 500, 503) with a `request_id`
+that matches the `X-Request-ID` response header. Operational endpoints: `GET /healthz`,
+`GET /readyz`, `GET /version`, `GET /metrics` (Prometheus). The committed snapshot is
+[`backend/openapi.json`](backend/openapi.json).
 
 ## Repository layout
 
@@ -77,6 +101,8 @@ and returns `501`; the pipeline arrives in Phase 3.
 | `test` | pytest and vitest (`--backend`, `--frontend`, `--coverage`) |
 | `build-index` | Build and verify the index from `corpus/` (`--inspect` for chunk statistics) |
 | `verify-determinism` | SC1: N isolated rebuilds with different hash seeds must be byte-identical |
+| `dev` | API (uvicorn `--reload`) and web (Vite) together (`--api-only`, `--web-only`) |
+| `smoke` | Probe a running API; `--bench N` adds a p95 latency check (`--base-url`) |
 
 More scripts arrive with later phases (`plan.md` §5).
 

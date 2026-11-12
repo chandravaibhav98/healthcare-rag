@@ -1,6 +1,6 @@
 # ADR-0007 — Abstention response policy (patient-safety posture)
 
-- **Status:** Proposed (draft; implemented in Phase 3)
+- **Status:** Proposed (implemented in Phase 3; reviewer storage in Phase 5)
 - **Date:** 2026-11-07
 - **Plan ref:** `plan.md` §3 ADR-007 · **Affects:** SC3, D3
 
@@ -23,6 +23,20 @@ When `status = needs_review`:
 - The low-confidence **candidate answer** is stored for the `reviewer` and `admin` roles
   only (review queue, Phase 5). It is never returned to a `user`.
 
+## Implementation (Phase 3)
+
+`app/services/qa_service.py`:
+
+- The candidate sources are the citations of the withheld answer when one was generated,
+  otherwise the top retrieval hits; at most **3** (`CANDIDATE_SOURCES`), renumbered `1..n`.
+- `confidence` reports the real computed score for `numeric_mismatch` and
+  `low_confidence`, and `0.0` when nothing was generated (`no_evidence`,
+  `below_retrieval_floor`). Reporting the real score lets reviewers see how close it was.
+- The withheld candidate answer travels only inside the internal `QAOutcome` handed to
+  observers. Until the review queue exists (Phase 5) it is written to the structured
+  query log, and only when `LOG_QUESTION_TEXT=true` (never in production, ADR-0009).
+  A test asserts the candidate text never appears in the HTTP response.
+
 ## Consequences
 
 - **Positive:** weakly supported text never reaches end users, and every abstention can
@@ -32,5 +46,5 @@ When `status = needs_review`:
 
 ## Verification
 
-Contract invariants (Phase 0); API tests for the abstention path (Phase 3); E2E
-abstention flow (Phase 7).
+Contract invariants (Phase 0); `tests/unit/test_qa_service.py` and
+`tests/api/test_qa_routes.py` (Phase 3); E2E abstention flow (Phase 7).

@@ -24,15 +24,24 @@ def test_openapi_exposes_canonical_route_and_spec_alias() -> None:
     for path in ("/api/v1/qa", "/qa"):
         responses = paths[path]["post"]["responses"]
         assert "application/json" in responses["200"]["content"]
-        for code in ("422", "501"):
+        assert "501" not in responses, "the Phase 0 stub response must be gone"
+        for code in ("422", "429", "500", "503"):
             assert set(responses[code]["content"]) == {"application/problem+json"}
+
+
+def test_readiness_503_keeps_its_own_json_body() -> None:
+    paths = json.loads(OPENAPI_PATH.read_text(encoding="utf-8"))["paths"]
+    content = paths["/readyz"]["get"]["responses"]["503"]["content"]
+    assert set(content) == {"application/json"}
 
 
 def test_openapi_response_schema_keeps_the_four_spec_fields() -> None:
     doc = json.loads(render_openapi())
     qa_response = doc["components"]["schemas"]["QAResponse"]
     assert set(qa_response["required"]) == {"answer", "citations", "confidence", "status"}
-    assert doc["info"]["version"] == "1.0.0"
+    # 1.1.0: additive only (Citation.superseded, documented 429/500/503), so minor bump.
+    assert doc["info"]["version"] == "1.1.0"
+    assert "superseded" not in doc["components"]["schemas"]["Citation"].get("required", [])
 
 
 def test_gold_schema_snapshot_is_json_schema() -> None:

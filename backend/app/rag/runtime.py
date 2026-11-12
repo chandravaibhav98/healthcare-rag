@@ -13,6 +13,8 @@ from app.rag.generation.extractive import ExtractiveGenerator
 from app.rag.pipeline import LoadedIndex
 from app.rag.retrieval.expansion import QueryExpander
 from app.rag.retrieval.hybrid import HybridRetriever, RetrievalMode
+from app.rag.validation.confidence import ConfidenceWeights
+from app.rag.validation.validator import EvidenceValidator
 
 
 @dataclass(frozen=True, slots=True)
@@ -22,6 +24,7 @@ class RagRuntime:
     index: LoadedIndex
     retriever: HybridRetriever
     generator: ExtractiveGenerator
+    validator: EvidenceValidator
 
     @property
     def index_version(self) -> str:
@@ -55,4 +58,13 @@ def build_runtime(
         mmr_lambda=settings.answer_mmr_lambda,
         min_relative_score=settings.answer_min_relative_score,
     )
-    return RagRuntime(index=index, retriever=retriever, generator=generator)
+    validator = EvidenceValidator(
+        index,
+        expander=expander,
+        weights=ConfidenceWeights(
+            coverage=settings.confidence_weight_coverage,
+            query_support=settings.confidence_weight_query_support,
+            retrieval=settings.confidence_weight_retrieval,
+        ),
+    )
+    return RagRuntime(index=index, retriever=retriever, generator=generator, validator=validator)
