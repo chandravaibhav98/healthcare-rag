@@ -1,0 +1,298 @@
+{
+  "description": "test-v2: held-out questions written after test-v1 was spent and before further tuning; evaluated ONCE on 2026-11-12 with the configuration frozen on the dev pool. Official Phase 4 result (docs/evaluation-report.md).",
+  "index_version": "6ce73ffaf982",
+  "config": {
+    "retrieval": "BM25 + query expansion (RRF dense weight 0)",
+    "confidence_weights": [
+      0.2,
+      0.6,
+      0.2
+    ],
+    "threshold": 0.6,
+    "retrieval_floor": 0.15,
+    "query_support": "IDF-weighted, best single cited chunk, filler words removed"
+  },
+  "retrieval": {
+    "p@5": {
+      "mean": 0.4169,
+      "ci95_low": 0.3711,
+      "ci95_high": 0.4627,
+      "n": 83
+    },
+    "ceiling@5": {
+      "mean": 0.5831,
+      "ci95_low": 0.5277,
+      "ci95_high": 0.641,
+      "n": 83
+    },
+    "hit@5": {
+      "mean": 0.9518,
+      "ci95_low": 0.9036,
+      "ci95_high": 0.988,
+      "n": 83
+    },
+    "rr": {
+      "mean": 0.8552,
+      "ci95_low": 0.7883,
+      "ci95_high": 0.912,
+      "n": 83
+    },
+    "ndcg@5": {
+      "mean": 0.7839,
+      "ci95_low": 0.7246,
+      "ci95_high": 0.8343,
+      "n": 83
+    },
+    "r@10": {
+      "mean": 0.8895,
+      "ci95_low": 0.8451,
+      "ci95_high": 0.9269,
+      "n": 83
+    },
+    "p@5_of_ceiling": 0.715
+  },
+  "retrieval_breakdown": {
+    "topic": {
+      "aefi-reporting": {
+        "n": 6,
+        "p@5": 0.6,
+        "ceiling@5": 0.8,
+        "hit@5": 1.0,
+        "mrr": 0.8889
+      },
+      "cold-chain": {
+        "n": 6,
+        "p@5": 0.4667,
+        "ceiling@5": 0.6667,
+        "hit@5": 1.0,
+        "mrr": 0.8667
+      },
+      "device-associated-infections": {
+        "n": 6,
+        "p@5": 0.4667,
+        "ceiling@5": 0.6333,
+        "hit@5": 1.0,
+        "mrr": 0.9167
+      },
+      "environmental-cleaning": {
+        "n": 6,
+        "p@5": 0.4,
+        "ceiling@5": 0.4333,
+        "hit@5": 1.0,
+        "mrr": 1.0
+      },
+      "hand-hygiene": {
+        "n": 6,
+        "p@5": 0.4,
+        "ceiling@5": 0.7667,
+        "hit@5": 0.6667,
+        "mrr": 0.5694
+      },
+      "immunization-schedules": {
+        "n": 6,
+        "p@5": 0.5333,
+        "ceiling@5": 0.8667,
+        "hit@5": 1.0,
+        "mrr": 0.8333
+      },
+      "injection-safety": {
+        "n": 4,
+        "p@5": 0.45,
+        "ceiling@5": 0.55,
+        "hit@5": 1.0,
+        "mrr": 0.875
+      },
+      "ipc-programme": {
+        "n": 4,
+        "p@5": 0.25,
+        "ceiling@5": 0.35,
+        "hit@5": 0.75,
+        "mrr": 0.7917
+      },
+      "occupational-health": {
+        "n": 4,
+        "p@5": 0.3,
+        "ceiling@5": 0.5,
+        "hit@5": 1.0,
+        "mrr": 0.875
+      },
+      "outbreak-response": {
+        "n": 6,
+        "p@5": 0.4,
+        "ceiling@5": 0.4667,
+        "hit@5": 1.0,
+        "mrr": 0.9167
+      },
+      "ppe": {
+        "n": 5,
+        "p@5": 0.36,
+        "ceiling@5": 0.6,
+        "hit@5": 0.8,
+        "mrr": 0.6
+      },
+      "sharps-safety": {
+        "n": 6,
+        "p@5": 0.4667,
+        "ceiling@5": 0.5667,
+        "hit@5": 1.0,
+        "mrr": 0.8667
+      },
+      "sterilization": {
+        "n": 6,
+        "p@5": 0.3,
+        "ceiling@5": 0.4333,
+        "hit@5": 1.0,
+        "mrr": 0.8889
+      },
+      "transmission-based-precautions": {
+        "n": 6,
+        "p@5": 0.3667,
+        "ceiling@5": 0.5333,
+        "hit@5": 1.0,
+        "mrr": 0.8889
+      },
+      "waste-management": {
+        "n": 6,
+        "p@5": 0.4,
+        "ceiling@5": 0.4667,
+        "hit@5": 1.0,
+        "mrr": 1.0
+      }
+    },
+    "kind": {
+      "acronym": {
+        "n": 5,
+        "p@5": 0.32,
+        "ceiling@5": 0.36,
+        "hit@5": 1.0,
+        "mrr": 0.84
+      },
+      "direct": {
+        "n": 65,
+        "p@5": 0.4369,
+        "ceiling@5": 0.6031,
+        "hit@5": 0.9538,
+        "mrr": 0.8915
+      },
+      "paraphrase": {
+        "n": 13,
+        "p@5": 0.3538,
+        "ceiling@5": 0.5692,
+        "hit@5": 0.9231,
+        "mrr": 0.6795
+      }
+    }
+  },
+  "validation": {
+    "pass_rate": {
+      "mean": 0.8072,
+      "ci95_low": 0.7229,
+      "ci95_high": 0.8916,
+      "n": 83
+    },
+    "grounded_pass_rate": {
+      "mean": 0.7952,
+      "ci95_low": 0.7108,
+      "ci95_high": 0.8795,
+      "n": 83
+    },
+    "false_validation_rate": {
+      "mean": 0.1667,
+      "ci95_low": 0.0,
+      "ci95_high": 0.4167,
+      "n": 12
+    },
+    "falsely_validated": [
+      "q-1085",
+      "q-1087"
+    ],
+    "mean_confidence": 0.7201,
+    "keyword_recall_validated": 0.9403,
+    "abstention_reasons": {
+      "validated": 67,
+      "below_retrieval_floor": 3,
+      "low_confidence": 13
+    },
+    "by_kind": {
+      "acronym": {
+        "n": 5,
+        "pass_rate": 1.0
+      },
+      "direct": {
+        "n": 65,
+        "pass_rate": 0.8308
+      },
+      "paraphrase": {
+        "n": 13,
+        "pass_rate": 0.6154
+      }
+    }
+  },
+  "threshold_curve": [
+    {
+      "threshold": 0.3,
+      "pass_rate": 0.9639,
+      "false_validation_rate": 0.6667
+    },
+    {
+      "threshold": 0.35,
+      "pass_rate": 0.9639,
+      "false_validation_rate": 0.6667
+    },
+    {
+      "threshold": 0.4,
+      "pass_rate": 0.9639,
+      "false_validation_rate": 0.5833
+    },
+    {
+      "threshold": 0.45,
+      "pass_rate": 0.9639,
+      "false_validation_rate": 0.4167
+    },
+    {
+      "threshold": 0.5,
+      "pass_rate": 0.9518,
+      "false_validation_rate": 0.3333
+    },
+    {
+      "threshold": 0.55,
+      "pass_rate": 0.9157,
+      "false_validation_rate": 0.25
+    },
+    {
+      "threshold": 0.6,
+      "pass_rate": 0.8072,
+      "false_validation_rate": 0.1667
+    },
+    {
+      "threshold": 0.65,
+      "pass_rate": 0.747,
+      "false_validation_rate": 0.1667
+    },
+    {
+      "threshold": 0.7,
+      "pass_rate": 0.6145,
+      "false_validation_rate": 0.0833
+    },
+    {
+      "threshold": 0.75,
+      "pass_rate": 0.4819,
+      "false_validation_rate": 0.0833
+    },
+    {
+      "threshold": 0.8,
+      "pass_rate": 0.4337,
+      "false_validation_rate": 0.0833
+    },
+    {
+      "threshold": 0.85,
+      "pass_rate": 0.2651,
+      "false_validation_rate": 0.0833
+    },
+    {
+      "threshold": 0.9,
+      "pass_rate": 0.0,
+      "false_validation_rate": 0.0
+    }
+  ]
+}

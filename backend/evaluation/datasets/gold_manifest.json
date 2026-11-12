@@ -1,0 +1,29 @@
+{
+  "index_version": "6ce73ffaf982",
+  "source_sha256": {
+    "gold_source.yaml": "02714790e627b829dc1afccda0b609bd8a7bcab6fc58462597a2ec0eb4c8cbce",
+    "gold_test_source.yaml": "3a65e49ff78ebe725b6936d1f72ec3a0f8c1da37fd85471c9d0fcda07a4e3402"
+  },
+  "counts": {
+    "dev": {
+      "total": 144,
+      "answerable": 122,
+      "by_kind": {
+        "acronym": 13,
+        "direct": 88,
+        "paraphrase": 21,
+        "unanswerable": 22
+      }
+    },
+    "test": {
+      "total": 95,
+      "answerable": 83,
+      "by_kind": {
+        "acronym": 5,
+        "direct": 65,
+        "paraphrase": 13,
+        "unanswerable": 12
+      }
+    }
+  }
+}

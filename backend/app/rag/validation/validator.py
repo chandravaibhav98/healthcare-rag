@@ -2,8 +2,10 @@
 
 Signals, all in [0, 1]:
 * coverage: answer content tokens found in the cited chunk text (brief D3)
-* query_support: IDF-weighted share of question key terms found in the cited evidence
-  (synonym-aware; see `support.py` for why it is IDF-weighted)
+* query_support: IDF-weighted share of the question's key terms found in the BEST single
+  cited chunk (synonym-aware; see `support.py`). Phase 4: a real answer usually has one
+  passage that covers the whole question, while an off-topic question collects partial
+  matches spread over several chunks, so the union over-credits it (AUC 0.952 → 0.983).
 * retrieval_score: cosine(expanded question, best cited chunk) in the embedding space
 * numeric_ok: every number/unit in the answer appears in the cited evidence
 
@@ -66,7 +68,10 @@ class EvidenceValidator:
         texts = [c.chunk.text for c in cited]
         headed = [f"{c.chunk.title}\n{c.chunk.section}\n{c.chunk.text}" for c in cited]
         cov = round(coverage(answer.text, texts), 6)
-        qs = round(query_support(question, headed, self._expander, self._term_weight), 6)
+        qs = round(
+            max(query_support(question, [h], self._expander, self._term_weight) for h in headed),
+            6,
+        )
         rs = self.relevance(question, cited)
         numeric = numeric_consistency(answer.text, texts)
         return ValidationResult(

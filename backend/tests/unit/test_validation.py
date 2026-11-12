@@ -98,7 +98,7 @@ def test_combine_is_weighted_and_clamped() -> None:
     w = ConfidenceWeights()
     assert combine(1.0, 1.0, 1.0, w) == 1.0
     assert combine(0.0, 0.0, 0.0, w) == 0.0
-    assert combine(1.0, 0.5, 0.2, w) == pytest.approx(0.4 + 0.175 + 0.05)
+    assert combine(1.0, 0.5, 0.2, w) == pytest.approx(0.2 * 1.0 + 0.6 * 0.5 + 0.2 * 0.2)
 
 
 @pytest.mark.parametrize(

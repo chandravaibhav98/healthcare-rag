@@ -1,5 +1,6 @@
-# CI (Phases 0-1): lint + typecheck + tests on every PR and on main, plus the SC1
-# determinism gate (byte-identical index on Linux and Windows).
+# CI (Phases 0-4): lint + typecheck + tests on every PR and on main, the SC1
+# determinism gate (byte-identical index on Linux and Windows) and the Phase 4
+# evaluation gate (no regression on the dev pool, no false validations).
 # Jobs call scripts/setup.*, the same entry point a developer uses, so "green on CI"
 # and "green on my machine" mean the same thing. Phase 10 extends this pipeline.
 name: ci
@@ -106,6 +107,26 @@ jobs:
           ls -l manifests
           cmp manifests/manifest-Linux.json manifests/manifest-Windows.json
           echo "index_version: $(python3 -c 'import json;print(json.load(open("manifests/manifest-Linux.json"))["index_version"])')"
+
+  evaluation:
+    name: evaluation gate (dev pool, no regression)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
+        with:
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+      - run: uv sync --locked --directory backend
+      - name: Build index, check gold files, run the gate
+        run: bash scripts/eval.sh --split dev --gate
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: evaluation-report
+          path: backend/evaluation/reports/
+          if-no-files-found: ignore
 
   hygiene:
     name: pre-commit hygiene (whitespace, EOL, secrets, ruff)

@@ -12,7 +12,7 @@ import re
 import unicodedata
 from typing import Final
 
-from app.rag.analysis import analyze
+from app.rag.analysis import analyze, word_tokens
 
 _MARKER: Final = re.compile(r"\s*\[\d+\]")
 # Answer-type phrases say WHAT KIND of fact is wanted, not what the topic is.
@@ -88,9 +88,69 @@ def content_tokens(text: str) -> frozenset[str]:
     return frozenset(analyze(strip_citation_markers(text)))
 
 
+#: Conversational words that carry no topic. They are rare in guideline text, so IDF
+#: weighting would otherwise make them look like the most important terms of a lay
+#: question ("what happens if…", "what goes into…") and penalise valid paraphrases.
+#: Found on the Phase 4 dev split; keep the list short and topic-free.
+QUESTION_FILLER: Final = frozenset(
+    {
+        "get",
+        "gets",
+        "got",
+        "go",
+        "goes",
+        "going",
+        "come",
+        "back",
+        "happen",
+        "happens",
+        "happened",
+        "do",
+        "does",
+        "did",
+        "done",
+        "ever",
+        "still",
+        "really",
+        "exactly",
+        "proper",
+        "properly",
+        "count",
+        "counts",
+        "kind",
+        "thing",
+        "things",
+        "way",
+        "someone",
+        "anyone",
+        "people",
+        "person",
+        "need",
+        "needs",
+        "want",
+        "make",
+        "makes",
+        "made",
+        "tell",
+        "told",
+        "know",
+        "ok",
+        "okay",
+        "allowed",
+        "acceptable",
+        "safe",
+        "far",
+        "apart",
+        "day",
+        "there",
+    }
+)
+
+
 def question_key_terms(question: str) -> frozenset[str]:
-    """Topical terms of a question: content tokens minus answer-type phrases."""
-    return frozenset(analyze(_INTERROGATIVE.sub(" ", question)))
+    """Topical terms of a question: content tokens minus answer-type phrases and filler."""
+    words = [w for w in word_tokens(_INTERROGATIVE.sub(" ", question)) if w not in QUESTION_FILLER]
+    return frozenset(analyze(" ".join(words)))
 
 
 def _canonical_number(raw: str) -> str:

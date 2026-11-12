@@ -32,6 +32,17 @@ def test_rrf_empty_rankings() -> None:
     assert reciprocal_rank_fusion([[], []], k=60) == {}
 
 
+def test_weighted_rrf_scales_each_vote_and_skips_zero_weights() -> None:
+    fused = reciprocal_rank_fusion([[1, 2], [2, 3]], k=60, weights=[0.5, 1.0])
+    assert fused[1] == pytest.approx(0.5 / 61)
+    assert fused[2] == pytest.approx(0.5 / 62 + 1 / 61)
+    assert reciprocal_rank_fusion([[1], [2]], k=60, weights=[0.0, 1.0]) == {
+        2: pytest.approx(1 / 61)
+    }
+    with pytest.raises(ValueError, match="one weight per ranking"):
+        reciprocal_rank_fusion([[1], [2]], k=60, weights=[1.0])
+
+
 # ---------------------------------------------------------- query expansion ----
 
 
@@ -112,3 +123,17 @@ def test_modes_report_their_ranks(fixture_index_dir: Path, mode: RetrievalMode) 
 def test_invalid_configuration(fixture_index_dir: Path) -> None:
     with pytest.raises(ValueError, match="rrf_k"):
         HybridRetriever(load_index(fixture_index_dir), rrf_k=0)
+    with pytest.raises(ValueError, match="RRF weights"):
+        HybridRetriever(load_index(fixture_index_dir), dense_weight=0.0, sparse_weight=0.0)
+    with pytest.raises(ValueError, match="zero RRF weight"):
+        HybridRetriever(load_index(fixture_index_dir), mode=RetrievalMode.DENSE, dense_weight=0.0)
+
+
+def test_zero_dense_vote_equals_sparse_mode(fixture_index_dir: Path) -> None:
+    index = load_index(fixture_index_dir)
+    bm25_only = HybridRetriever(index, dense_weight=0.0).retrieve("glove removal hand hygiene", 5)
+    sparse = HybridRetriever(index, mode=RetrievalMode.SPARSE).retrieve(
+        "glove removal hand hygiene", 5
+    )
+    assert [h.chunk.chunk_id for h in bm25_only] == [h.chunk.chunk_id for h in sparse]
+    assert all(h.dense_rank is None for h in bm25_only)

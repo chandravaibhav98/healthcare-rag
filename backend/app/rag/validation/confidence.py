@@ -1,4 +1,4 @@
-"""Confidence score and status decision (ADR-0002, revised 2026-11-12).
+"""Confidence score and status decision (ADR-0002, revisions 1 and 2).
 
 confidence = w_cov · coverage + w_qs · query_support + w_ret · retrieval_score
 validated  ⇔ answer not empty ∧ confidence ≥ threshold ∧ numeric_ok
@@ -14,9 +14,10 @@ from app.api.schemas.qa import AbstentionReason, QAStatus
 
 @dataclass(frozen=True, slots=True)
 class ConfidenceWeights:
-    coverage: float = 0.40
-    query_support: float = 0.35
-    retrieval: float = 0.25
+    # Phase 4 (dev pool, 5-fold CV, τ fixed at 0.6, coverage ≥ 0.2): evaluation report §4.
+    coverage: float = 0.20
+    query_support: float = 0.60
+    retrieval: float = 0.20
 
     def __post_init__(self) -> None:
         total = self.coverage + self.query_support + self.retrieval

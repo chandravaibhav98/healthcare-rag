@@ -1,0 +1,211 @@
+{
+  "description": "test-v1: the first held-out split (68 questions), evaluated ONCE on 2026-11-12 with the configuration frozen on dev. Spent: these questions joined the development pool afterwards. Kept for the record (docs/evaluation-report.md §5).",
+  "index_version": "6ce73ffaf982",
+  "question_ids": [
+    "q-0001",
+    "q-0002",
+    "q-0004",
+    "q-0007",
+    "q-0009",
+    "q-0012",
+    "q-0015",
+    "q-0017",
+    "q-0018",
+    "q-0019",
+    "q-0020",
+    "q-0023",
+    "q-0027",
+    "q-0028",
+    "q-0029",
+    "q-0031",
+    "q-0032",
+    "q-0038",
+    "q-0041",
+    "q-0042",
+    "q-0044",
+    "q-0047",
+    "q-0048",
+    "q-0051",
+    "q-0052",
+    "q-0056",
+    "q-0057",
+    "q-0059",
+    "q-0063",
+    "q-0066",
+    "q-0069",
+    "q-0070",
+    "q-0071",
+    "q-0072",
+    "q-0074",
+    "q-0077",
+    "q-0078",
+    "q-0081",
+    "q-0083",
+    "q-0086",
+    "q-0087",
+    "q-0088",
+    "q-0091",
+    "q-0097",
+    "q-0099",
+    "q-0100",
+    "q-0101",
+    "q-0102",
+    "q-0105",
+    "q-0106",
+    "q-0108",
+    "q-0110",
+    "q-0112",
+    "q-0117",
+    "q-0120",
+    "q-0121",
+    "q-0122",
+    "q-0123",
+    "q-0125",
+    "q-0126",
+    "q-0128",
+    "q-0131",
+    "q-0133",
+    "q-0134",
+    "q-0135",
+    "q-0141",
+    "q-0142",
+    "q-0144"
+  ],
+  "config": {
+    "retrieval": "BM25 + query expansion (RRF dense weight 0)",
+    "confidence_weights": [
+      0.2,
+      0.35,
+      0.45
+    ],
+    "threshold": 0.6,
+    "retrieval_floor": 0.15
+  },
+  "retrieval": {
+    "p@5": {
+      "mean": 0.593,
+      "ci95_low": 0.5404,
+      "ci95_high": 0.6456,
+      "n": 57
+    },
+    "ceiling@5": {
+      "mean": 0.8211,
+      "ci95_low": 0.7684,
+      "ci95_high": 0.8737,
+      "n": 57
+    },
+    "hit@5": {
+      "mean": 0.9825,
+      "ci95_low": 0.9474,
+      "ci95_high": 1.0,
+      "n": 57
+    },
+    "rr": {
+      "mean": 0.887,
+      "ci95_low": 0.8245,
+      "ci95_high": 0.944,
+      "n": 57
+    },
+    "ndcg@5": {
+      "mean": 0.7829,
+      "ci95_low": 0.725,
+      "ci95_high": 0.8343,
+      "n": 57
+    },
+    "r@10": {
+      "mean": 0.8697,
+      "ci95_low": 0.8164,
+      "ci95_high": 0.9204,
+      "n": 57
+    },
+    "p@5_of_ceiling": 0.7222
+  },
+  "validation": {
+    "pass_rate": {
+      "mean": 0.7018,
+      "ci95_low": 0.5789,
+      "ci95_high": 0.8246,
+      "n": 57
+    },
+    "grounded_pass_rate": {
+      "mean": 0.6667,
+      "ci95_low": 0.5439,
+      "ci95_high": 0.7895,
+      "n": 57
+    },
+    "false_validation_rate": {
+      "mean": 0.0,
+      "ci95_low": 0.0,
+      "ci95_high": 0.0,
+      "n": 11
+    },
+    "mean_confidence": 0.6228
+  },
+  "threshold_curve": [
+    {
+      "threshold": 0.3,
+      "pass_rate": 1.0,
+      "false_validation_rate": 0.3636
+    },
+    {
+      "threshold": 0.35,
+      "pass_rate": 1.0,
+      "false_validation_rate": 0.3636
+    },
+    {
+      "threshold": 0.4,
+      "pass_rate": 0.9825,
+      "false_validation_rate": 0.1818
+    },
+    {
+      "threshold": 0.45,
+      "pass_rate": 0.9649,
+      "false_validation_rate": 0.0909
+    },
+    {
+      "threshold": 0.5,
+      "pass_rate": 0.9123,
+      "false_validation_rate": 0.0909
+    },
+    {
+      "threshold": 0.55,
+      "pass_rate": 0.7719,
+      "false_validation_rate": 0.0
+    },
+    {
+      "threshold": 0.6,
+      "pass_rate": 0.7018,
+      "false_validation_rate": 0.0
+    },
+    {
+      "threshold": 0.65,
+      "pass_rate": 0.4737,
+      "false_validation_rate": 0.0
+    },
+    {
+      "threshold": 0.7,
+      "pass_rate": 0.1228,
+      "false_validation_rate": 0.0
+    },
+    {
+      "threshold": 0.75,
+      "pass_rate": 0.0175,
+      "false_validation_rate": 0.0
+    },
+    {
+      "threshold": 0.8,
+      "pass_rate": 0.0,
+      "false_validation_rate": 0.0
+    },
+    {
+      "threshold": 0.85,
+      "pass_rate": 0.0,
+      "false_validation_rate": 0.0
+    },
+    {
+      "threshold": 0.9,
+      "pass_rate": 0.0,
+      "false_validation_rate": 0.0
+    }
+  ]
+}

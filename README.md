@@ -17,8 +17,9 @@ replaced by an organisation's secure guideline repository.
 | Phase 0: foundations, contracts and decisions | ✅ Built and verified · ⏳ ADR-0001 and ADR-0002 awaiting approval ([report](docs/project/phase-0-report.md)) |
 | Phase 1: synthetic corpus and deterministic indexing | ✅ 42 docs, 209 chunks, byte-identical rebuilds ([report](docs/project/phase-1-report.md)) |
 | Phase 2: retrieval and extractive QA core | ✅ Hybrid RRF + expansion, 15/15 smoke hit@5 ([report](docs/project/phase-2-report.md)) |
-| **Phase 3: validation engine and `/qa` API** | ✅ Live `/qa`, abstention, probes, metrics; p95 ≈ 11 ms over HTTP ([report](docs/project/phase-3-report.md)) |
-| Phase 4: evaluation and threshold tuning | ⏭️ Next |
+| Phase 3: validation engine and `/qa` API | ✅ Live `/qa`, abstention, probes, metrics; p95 ≈ 11 ms over HTTP ([report](docs/project/phase-3-report.md)) |
+| **Phase 4: evaluation and threshold tuning** | ✅ Harness + CI gate. Held-out: SC3 met (0.807); SC2 P@5 0.417 vs ceiling 0.583 (decision pending); 2/12 false validations ([report](docs/project/phase-4-report.md), [evaluation](docs/evaluation-report.md)) |
+| Phase 5: persistence, auth and admin APIs | ⏭️ Next |
 
 ## Quick start
 
@@ -85,7 +86,7 @@ that matches the `X-Request-ID` response header. Operational endpoints: `GET /he
 | --- | --- |
 | `backend/` | FastAPI app, RAG library, evaluation, tests ([README](backend/README.md)) |
 | `frontend/` | React + TypeScript + Vite SPA |
-| `corpus/` | 42 synthetic guideline documents ([corpus card](corpus/CORPUS_CARD.md)) |
+| `corpus/` | 72 synthetic guideline documents ([corpus card](corpus/CORPUS_CARD.md)) |
 | `e2e/` | Playwright E2E and demo (Phases 7 and 11) |
 | `deploy/` | Docker, Compose, Kubernetes (Phases 8 and 9) |
 | `scripts/` | Ops scripts, `.sh` + `.ps1` pairs ([CONTRIBUTING](CONTRIBUTING.md)) |
@@ -103,6 +104,7 @@ that matches the `X-Request-ID` response header. Operational endpoints: `GET /he
 | `verify-determinism` | SC1: N isolated rebuilds with different hash seeds must be byte-identical |
 | `dev` | API (uvicorn `--reload`) and web (Vite) together (`--api-only`, `--web-only`) |
 | `smoke` | Probe a running API; `--bench N` adds a p95 latency check (`--base-url`) |
+| `eval` | Evaluation scorecard (SC2, SC3, false validations); `--gate` for CI, `--split test` once per frozen config |
 
 More scripts arrive with later phases (`plan.md` §5).
 

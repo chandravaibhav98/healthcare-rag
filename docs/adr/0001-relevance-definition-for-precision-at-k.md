@@ -69,6 +69,24 @@ Adopt **B + C**, as implemented by `backend/evaluation/schemas.py`:
    `relevant_chunk_id` is missing from the index manifest, because a re-chunked corpus
    requires re-annotation.
 
+## Phase 4 evidence (2026-11-12)
+
+The warning in the Context section came true. Labelled honestly with this definition:
+
+| Question set | Relevant chunks per question | Ceiling of P@5 | Achieved P@5 | Share of ceiling |
+| --- | --- | --- | --- | --- |
+| v1 corpus, all 122 answerable | 2.7 | 0.54 | — | — |
+| v2 corpus, dev pool | 4.5 | 0.83 | 0.60 | 73% |
+| v2 corpus, test-v1 (spent) | 4.5 | 0.82 | 0.59 | 72% |
+| v2 corpus, test-v2 (held out) | 3.0 | 0.58 | 0.42 | 72% |
+
+Raw P@5 moves with the question mix (0.42–0.60), while P@5 as a share of its ceiling stays
+at 0.72–0.73. **Proposal for the approver:** report the literal P@5 (as this ADR already
+requires, with its ceiling) and judge SC2 on ceiling-normalised P@5, or re-base the
+target to a share of the ceiling. Smaller chunks would raise the ceiling but not usefulness
+(nDCG falls), so they are rejected as metric-gaming. Annotation followed §1 and §4; the
+second-person spot-check (≥ 20%) is still pending.
+
 ## Consequences
 
 - **Positive:** SC2 becomes achievable and defensible. Grade-2 metrics keep the strict

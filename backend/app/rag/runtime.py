@@ -50,6 +50,8 @@ def build_runtime(
         candidate_k=settings.retrieval_candidate_k,
         expander=expander,
         mode=mode,
+        dense_weight=settings.rrf_weight_dense,
+        sparse_weight=settings.rrf_weight_sparse,
     )
     generator = ExtractiveGenerator(
         index,

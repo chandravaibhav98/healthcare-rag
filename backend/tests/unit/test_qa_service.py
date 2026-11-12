@@ -57,11 +57,25 @@ def test_validated_answer_cites_every_marker(registry: IndexRegistry) -> None:
     assert recorder.outcomes[0].candidate_answer is None
 
 
-def test_below_floor_abstains_before_generation(registry: IndexRegistry) -> None:
+def test_off_topic_question_abstains_before_generation(registry: IndexRegistry) -> None:
+    # BM25 (the default retriever since Phase 4) finds no shared terms: no evidence at all.
     service, recorder = _service(registry)
     resp = service.answer(QARequest(question=OFF_TOPIC), "req-2")
     assert resp.status is QAStatus.NEEDS_REVIEW
     assert resp.answer == ABSTENTION_MESSAGE
+    assert resp.confidence == 0.0
+    assert resp.meta is not None
+    assert resp.meta.reason in {
+        AbstentionReason.NO_EVIDENCE,
+        AbstentionReason.BELOW_RETRIEVAL_FLOOR,
+    }
+    assert recorder.outcomes[0].candidate_answer is None
+
+
+def test_below_floor_abstains_with_candidate_sources(registry: IndexRegistry) -> None:
+    service, recorder = _service(registry, retrieval_floor=0.99)
+    resp = service.answer(QARequest(question=ANSWERABLE), "req-2b")
+    assert resp.status is QAStatus.NEEDS_REVIEW
     assert resp.confidence == 0.0
     assert resp.meta is not None
     assert resp.meta.reason is AbstentionReason.BELOW_RETRIEVAL_FLOOR

@@ -42,7 +42,9 @@ repos:
     hooks:
       - id: detect-secrets
         args: [--baseline, .secrets.baseline]
-        exclude: (^|/)(package-lock\.json|uv\.lock)$
+        # Lockfiles and generated evaluation records hold content hashes (index versions,
+        # SHA-256 of sources), which look like secrets to the entropy scanner.
+        exclude: (^|/)(package-lock\.json|uv\.lock|gold_manifest\.json|baseline\.json)$|^docs/evaluation/.*\.json$
 
   - repo: local
     hooks:

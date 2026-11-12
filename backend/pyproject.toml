@@ -75,6 +75,8 @@ known-first-party = ["app", "evaluation", "scripts"]
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101"]   # assert is the point of a test
 "scripts/**" = ["T201"] # CLI scripts may print
+# Evaluation entry points are CLIs that print their summary (library modules do not).
+"evaluation/{build_gold,common,eval_retrieval,eval_validation,threshold_sweep,run,gate}.py" = ["T201"]
 
 [tool.ruff.format]
 quote-style = "double"

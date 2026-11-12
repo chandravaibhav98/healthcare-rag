@@ -67,6 +67,9 @@ class Settings(BaseSettings):
     retrieval_top_k_default: int = Field(default=5, ge=1, le=TOP_K_MAX)
     retrieval_top_k_max: int = Field(default=TOP_K_MAX, ge=1, le=TOP_K_MAX)
     rrf_k: int = Field(default=60, ge=1)
+    # Votes of each retriever in RRF (Phase 4: tuned on the dev split).
+    rrf_weight_dense: float = Field(default=0.0, ge=0.0, le=1.0)
+    rrf_weight_sparse: float = Field(default=1.0, ge=0.0, le=1.0)
     retrieval_candidate_k: int = Field(default=50, ge=1, le=500)
     query_expansion_enabled: bool = True
     # Absolute cosine(question, best evidence chunk); below it → abstain before generation.
@@ -78,9 +81,9 @@ class Settings(BaseSettings):
 
     # --- validation and confidence (ADR-0002) --------------------------------
     confidence_threshold: float = Field(default=0.6, ge=0.0, le=1.0)
-    confidence_weight_coverage: float = Field(default=0.40, ge=0.0, le=1.0)
-    confidence_weight_query_support: float = Field(default=0.35, ge=0.0, le=1.0)
-    confidence_weight_retrieval: float = Field(default=0.25, ge=0.0, le=1.0)
+    confidence_weight_coverage: float = Field(default=0.20, ge=0.0, le=1.0)
+    confidence_weight_query_support: float = Field(default=0.60, ge=0.0, le=1.0)
+    confidence_weight_retrieval: float = Field(default=0.20, ge=0.0, le=1.0)
 
     # --- optional LLM generator (off by default) -----------------------------
     openai_api_key: SecretStr | None = None

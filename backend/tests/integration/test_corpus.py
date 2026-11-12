@@ -37,7 +37,8 @@ def docs() -> list[Document]:
 
 
 def test_corpus_size_and_balance(docs: list[Document]) -> None:
-    assert 40 <= len(docs) <= 60
+    # v2 (Phase 4) added 30 pocket guides, quick references and local procedures.
+    assert 60 <= len(docs) <= 90
     per_org = {org: sum(d.meta.source_org is org for d in docs) for org in SourceOrg}
     assert min(per_org.values()) >= 12, per_org
 

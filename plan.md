@@ -15,6 +15,7 @@
 | §7 Milestones & Critical Path | Order of work and what to cut if time runs short |
 | §8 Risk Register | Known risks and their mitigations |
 | §9 "Above & Beyond" Backlog | Optional differentiators, clearly separated from scope |
+| §10 Open Issues | Unresolved findings and pending decisions, each with an owning phase |
 
 **Guiding rule:** build a **vertical slice first**. Phases 0–4 alone satisfy every success criterion with a minimal backend. The React UI, admin dashboard, Docker, Kubernetes and the demo video are built on top of a core that already passes the targets.
 
@@ -731,3 +732,46 @@ tag:   release notes → prod overlay manifests rendered as an artifact
 | Per-topic calibration curves (reliability diagram) for confidence | Statistical rigour | S |
 
 ---
+
+## 10. Open Issues
+
+Living list of unresolved items found while building. Each row names the phase that
+owns it. Close a row by moving its outcome into that phase's report and deleting it here.
+
+**Status key:** 🔴 blocks a success criterion or a phase exit · 🟠 must be resolved in the
+owning phase · 🟢 tracked, low risk
+
+### 10.1 Decisions awaiting approval
+
+| # | Issue | Owner | Status |
+| --- | --- | --- | --- |
+| OI-1 | **ADR-0001** (section-level, graded relevance for P@K) is still *Proposed*. It now carries the Phase 4 evidence and a proposal (OI-19) | Mentor | 🔴 |
+| OI-2 | **ADR-0002** (composite confidence) is still *Proposed*, now with Revision 1 (Phase 3) and Revision 2 (Phase 4: best-chunk query support, weights 0.20/0.60/0.20) | Mentor | 🔴 |
+| OI-19 | **How SC2 is judged.** With honest labels the best possible P@5 is 0.58–0.83 depending on the question set, and the system reaches 72–73% of it on every set (test-v2 P@5 0.42). Options: keep literal P@5 (not met), judge ceiling-normalised P@5, or re-base the target. Evidence: `docs/evaluation-report.md` §3.1 | Mentor | 🔴 |
+| OI-20 | Second-person spot-check of ≥ 20% of the gold labels (ADR-0001 mitigation). Suggested sample: 30 dev + 20 test-v2 items | Mentor or a colleague | 🟠 |
+
+### 10.2 Quality and safety
+
+| # | Issue | Evidence | Owner | Status |
+| --- | --- | --- | --- | --- |
+| OI-17 | **Single-letter qualifiers are dropped** as stop-words, so "hepatitis **A** vaccine schedule" is validated from hepatitis B guidance | False validation on test-v2 (evaluation report §6) | Phase 4.1: keep letter and number qualifiers attached ("hepatitis a", "type 2"); evaluate on dev, confirm on test-v3 | 🔴 |
+| OI-18 | **Concepts that never co-occur** pass bag-of-terms support ("incubation period of measles": both terms exist, never together) | False validation on test-v2 | Phase 4.1: require the question's main concepts in the same cited sentence or chunk; optional offline entailment check (ADR-0002 option C) | 🔴 |
+| OI-21 | test-v2 is spent; any new claim needs a fresh held-out **test-v3**, written before the next tuning round | DATASET_CARD §5 | Phase 4.1 | 🟠 |
+| OI-22 | Paraphrase questions validate least often (test-v2: 0.62 vs 0.83 direct) | Evaluation report §6 | Phase 4.1: more lay synonyms from dev; revisit a stronger offline embedder | 🟠 |
+| OI-8 | Coverage is ≈ 1.0 for every extractive answer, so its 0.20 weight is a near-constant | ADR-0002 | Informative only with the optional LLM generator | 🟢 |
+| OI-9 | Noise in a question (e.g. a patient name) lowers query support and can cause an abstention (fails safe); not yet measured | Phase 3 log probe | Add noisy paraphrases to test-v3 | 🟢 |
+| OI-10 | `SvdEmbedder` ablation not built | Deferred from Phase 1 | Cut (plan §7) unless time allows | 🟢 |
+
+### 10.3 Platform and operations
+
+| # | Issue | Owner | Status |
+| --- | --- | --- | --- |
+| OI-11 | Rate limiting is per process; several replicas need a shared store (Redis) behind the same `TokenBucketLimiter` interface | Phase 8/9 (ADR-0008) | 🟢 |
+| OI-12 | The query log is a structured log line until PostgreSQL exists; candidate answers reach reviewers only via logs with `LOG_QUESTION_TEXT=true` | Phase 5 | 🟢 |
+| OI-13 | The community ingress-nginx controller is retired: verify current status and prefer Gateway API | Phase 9 | 🟢 |
+| OI-14 | npm `overrides` pins `minimatch` 11.0.5 for a Dependabot advisory; remove the override once the dependents ship a fixed range | Any phase, on Dependabot updates | 🟢 |
+| OI-15 | Phase 0 shell scripts are committed as mode `100644`. CI calls them with `bash`, so nothing breaks, but `./scripts/x.sh` fails on Linux/macOS. Fix: `git update-index --chmod=+x scripts/*.sh` | Any phase | 🟢 |
+| OI-16 | Housekeeping: delete the `_staging/` folder in the old outer project folder (verification tarballs only) | Owner, manual | 🟢 |
+
+Closed in Phase 4 (outcomes in `docs/project/phase-4-report.md` §4): OI-3, OI-4, OI-5,
+OI-6, OI-7.

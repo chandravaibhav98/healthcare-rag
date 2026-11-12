@@ -1,0 +1,479 @@
+# Held-out TEST questions, version 2 (ADR-0001, DATASET_CARD.md).
+#
+# Written on 2026-11-12, after the first test split (test-v1) had been used once and
+# before any further tuning. Revised once before its first use: the draft targeted mostly
+# single-source secondary facts (P@5 ceiling 0.45), so 17 items were replaced to follow the
+# dev authoring protocol (core guidance covered by several organisations). test-v1 then
+# joined the development pool. Never tune on these questions; run the test split once per
+# frozen configuration. Same fields and grading rules as gold_source.yaml.
+
+aefi-reporting:
+  - q: "Which vaccine recipients need to be observed for 30 minutes instead of 15?"
+    kind: direct
+    g2: [cdc-aefi-001::observation-and-syncope-prevention::0001, nih-aefi-001::immediate-reactions-in-the-clinic::0001, who-aefi-001::observation-after-vaccination-and-anaphylaxis-readiness::0001, cdc-aefi-002::observation-period::0001, who-aefi-002::at-the-vaccination-session::0001]
+    g1: [cdc-aefi-002::anaphylaxis-readiness::0001, cdc-aefi-001::managing-anaphylaxis::0001]
+    kw: ["anaphylaxis"]
+  - q: "How long does a sore arm or mild fever after a vaccine usually last?"
+    kind: paraphrase
+    g2: [nih-aefi-001::common-expected-reactions::0001]
+    g1: [cdc-aefi-002::before-vaccinating::0001, who-aefi-002::at-the-vaccination-session::0001]
+    kw: ["1–3 days"]
+  - q: "Should an adverse event be reported if it is unclear whether the vaccine caused it?"
+    kind: direct
+    g2: [cdc-aefi-001::why-report::0001, who-aefi-001::what-to-report::0001, cdc-aefi-002::what-to-report::0001, who-aefi-002::which-events-to-report::0001]
+    g1: [who-aefi-001::definitions::0001, who-aefi-002::key-definitions::0001]
+    kw: ["even"]
+  - q: "What is an adverse event following immunization?"
+    kind: direct
+    g2: [who-aefi-001::definitions::0001, who-aefi-002::key-definitions::0001]
+    g1: [cdc-aefi-001::why-report::0001, cdc-aefi-002::what-to-report::0001]
+    kw: ["untoward"]
+  - q: "How soon should non-serious adverse events after immunization be reported?"
+    kind: direct
+    g2: [who-aefi-001::reporting-timelines::0001, who-aefi-002::reporting-deadlines::0001]
+    g1: []
+    kw: ["one week"]
+  - q: "Why should patients stay seated during the observation period after vaccination?"
+    kind: paraphrase
+    g2: [cdc-aefi-001::observation-and-syncope-prevention::0001, cdc-aefi-002::observation-period::0001]
+    g1: [nih-aefi-001::immediate-reactions-in-the-clinic::0001, who-aefi-001::observation-after-vaccination-and-anaphylaxis-readiness::0001, who-aefi-002::at-the-vaccination-session::0001]
+    kw: ["fainting"]
+
+cold-chain:
+  - q: "What should staff do when a vaccine fridge alarm goes off?"
+    kind: paraphrase
+    g2: [nih-cc-001::alarm-response::0001, nih-cc-002::responding-to-an-alarm::0001]
+    g1: [nih-cc-001::continuous-monitoring::0001, cdc-cc-002::continuous-temperature-monitoring::0001, who-cc-002::checking-temperatures::0001]
+    kw: ["15 minutes"]
+  - q: "Can food or drinks be kept in a vaccine refrigerator?"
+    kind: direct
+    g2: [who-cc-001::equipment-and-arrangement::0001, who-cc-002::equipment-and-packing-the-refrigerator::0001, nih-cc-002::approved-units::0001]
+    g1: [cdc-cc-002::storage-units-and-placement::0001]
+    kw: ["food"]
+  - q: "Who should be designated to look after the cold chain at a facility?"
+    kind: direct
+    g2: [who-cc-001::the-cold-chain::0001, who-cc-002::cold-chain-focal-person::0001, nih-cc-001::responsibilities::0001]
+    g1: []
+    kw: ["backup"]
+  - q: "When is the shake test used for vaccines?"
+    kind: direct
+    g2: [who-cc-001::responding-to-a-temperature-excursion::0001, who-cc-002::when-the-temperature-goes-out-of-range::0001]
+    g1: []
+    kw: ["freez"]
+  - q: "What changed in the latest CDC vaccine storage guidance?"
+    kind: direct
+    g2: [cdc-cc-002::summary-of-changes::0001]
+    g1: [cdc-cc-002::continuous-temperature-monitoring::0001, cdc-cc-002::responding-to-temperature-excursions::0001]
+    kw: ["data logger"]
+  - q: "Should vaccines that expire soonest be used first?"
+    kind: paraphrase
+    g2: [cdc-cc-002::storage-units-and-placement::0001, who-cc-001::equipment-and-arrangement::0001, who-cc-002::equipment-and-packing-the-refrigerator::0001]
+    g1: []
+    kw: ["earliest"]
+
+device-associated-infections:
+  - q: "What skin antiseptic is used before inserting a central line?"
+    kind: direct
+    g2: [cdc-dai-001::clabsi-prevention-at-insertion::0001, who-dai-001::central-line-insertion-bundle::0001, nih-dai-002::central-line-insertion::0001]
+    g1: []
+    kw: ["chlorhexidine"]
+  - q: "Which insertion site should be avoided for central lines in adults?"
+    kind: direct
+    g2: [cdc-dai-001::clabsi-prevention-at-insertion::0001, who-dai-001::central-line-insertion-bundle::0001, nih-dai-002::central-line-insertion::0001]
+    g1: []
+    kw: ["femoral"]
+  - q: "How should condensate in the ventilator circuit be handled?"
+    kind: direct
+    g2: [nih-dai-001::equipment-management::0001, who-dai-002::handling-the-ventilator-circuit::0001]
+    g1: [nih-dai-001::ventilator-bundle::0001, who-dai-002::the-ventilator-bundle::0001]
+    kw: ["away from the patient"]
+  - q: "How often should the need for a central line be reviewed?"
+    kind: direct
+    g2: [cdc-dai-001::clabsi-prevention-during-maintenance::0001, who-dai-001::central-line-maintenance::0001, nih-dai-002::central-line-maintenance::0001]
+    g1: [who-dai-001::overview::0001]
+    kw: ["every day"]
+  - q: "What are acceptable reasons to place a urinary catheter?"
+    kind: direct
+    g2: [cdc-dai-001::cauti-prevention::0001, who-dai-001::urinary-catheter-bundle::0001, nih-dai-002::urinary-catheter-indications-and-insertion::0001]
+    g1: []
+    kw: ["urinary retention"]
+  - q: "What can be used instead of an indwelling urinary catheter?"
+    kind: paraphrase
+    g2: [cdc-dai-001::removal-reminders-and-alternatives::0001, nih-dai-002::urinary-catheter-maintenance-and-removal::0001]
+    g1: []
+    kw: ["intermittent"]
+
+environmental-cleaning:
+  - q: "How often should disinfectant dilutions be prepared?"
+    kind: direct
+    g2: [who-env-001::products-and-contact-time::0001, who-env-002::contact-time::0001]
+    g1: []
+    kw: ["fresh"]
+  - q: "What contact time does accelerated hydrogen peroxide need?"
+    kind: direct
+    g2: [nih-env-001::approved-product-classes::0001, nih-env-002::products-and-wet-contact-time::0001]
+    g1: []
+    kw: ["1 minute"]
+  - q: "How long can MRSA and C. difficile spores survive on dry surfaces?"
+    kind: acronym
+    g2: [who-env-001::why-environmental-cleaning-matters::0001]
+    g1: []
+    kw: ["weeks to months"]
+  - q: "What should you do if a surface dries before the disinfectant contact time is reached?"
+    kind: direct
+    g2: [cdc-env-001::disinfectant-use-and-contact-time::0001, who-env-002::contact-time::0001, nih-env-002::products-and-wet-contact-time::0001, nih-env-001::how-to-achieve-the-contact-time::0001]
+    g1: [who-env-001::products-and-contact-time::0001]
+    kw: ["reapply"]
+  - q: "Who decides which surfaces are cleaned, how often and with which products?"
+    kind: direct
+    g2: [cdc-env-001::environmental-services-program::0001]
+    g1: [who-env-001::risk-based-cleaning-frequencies::0001]
+    kw: ["environmental services program"]
+  - q: "Which disinfectants are used on laboratory benches and biosafety cabinets?"
+    kind: direct
+    g2: [nih-env-001::research-laboratories::0001]
+    g1: []
+    kw: ["biosafety plan"]
+
+hand-hygiene:
+  - q: "Does alcohol handrub work against C. difficile?"
+    kind: acronym
+    g2: [cdc-hh-001::choosing-between-handrub-and-soap::0001, who-hh-001::technique-and-duration::0001, who-hh-002::handrub-or-soap-and-water::0001, nih-hh-002::approved-products-and-method::0001, nih-hh-003::which-method::0001]
+    g1: []
+    kw: ["soap and water"]
+  - q: "How long does CDC say hand sanitizer should be rubbed in?"
+    kind: direct
+    g2: [cdc-hh-001::technique::0001]
+    g1: [who-hh-001::technique-and-duration::0001, nih-hh-002::approved-products-and-method::0001, who-hh-002::how-long-it-takes::0001, nih-hh-003::how-long::0001]
+    kw: ["20 seconds"]
+  - q: "Do hands need to be cleaned after taking off gloves?"
+    kind: paraphrase
+    g2: [cdc-hh-001::when-to-clean-hands::0001, nih-hh-002::required-opportunities::0001, who-hh-002::gloves::0001, nih-hh-003::when::0001, who-hh-001::the-five-moments-for-hand-hygiene::0001]
+    g1: [cdc-hh-001::gloves-and-hand-hygiene::0001]
+    kw: ["after"]
+  - q: "Where should hand sanitizer be provided for patients and visitors?"
+    kind: direct
+    g2: [cdc-hh-001::patient-and-visitor-engagement::0001]
+    g1: [who-ipc-001::workload-staffing-bed-occupancy-and-environment::0001, cdc-ipc-001::environment-and-capacity::0001]
+    kw: ["entrance"]
+  - q: "Can disposable gloves be washed and reused?"
+    kind: direct
+    g2: [cdc-hh-001::gloves-and-hand-hygiene::0001, who-hh-002::gloves::0001]
+    g1: []
+    kw: ["reuse"]
+  - q: "Which staff does the hand hygiene guidance apply to?"
+    kind: direct
+    g2: [who-hh-001::purpose-and-scope::0001, nih-hh-002::policy-statement-and-changes::0001]
+    g1: [nih-hh-002::research-units::0001]
+    kw: ["cleaners"]
+
+immunization-schedules:
+  - q: "How many doses of varicella vaccine do non-immune health workers need?"
+    kind: direct
+    g2: [cdc-imm-001::schedule::0001, who-imm-001::recommended-vaccines::0001, cdc-imm-002::measles-mumps-rubella-and-varicella::0001, who-imm-002::recommended-vaccines::0001]
+    g1: [cdc-imm-001::evidence-of-immunity::0001]
+    kw: ["2 doses"]
+  - q: "What is the usual hepatitis B vaccine schedule for staff?"
+    kind: direct
+    g2: [nih-imm-001::hepatitis-b::0001, who-imm-001::recommended-vaccines::0001, who-imm-002::recommended-vaccines::0001, cdc-imm-001::schedule::0001, cdc-imm-002::hepatitis-b::0001]
+    g1: []
+    kw: ["0, 1 and 6 months"]
+  - q: "Do staff with a protective hepatitis B antibody level need booster doses?"
+    kind: direct
+    g2: [nih-imm-001::hepatitis-b::0001, who-imm-002::checking-hepatitis-b-protection::0001]
+    g1: [who-imm-001::hepatitis-b-post-vaccination-testing::0001, cdc-imm-002::hepatitis-b::0001]
+    kw: ["booster"]
+  - q: "How often should health workers be vaccinated against influenza?"
+    kind: direct
+    g2: [cdc-imm-001::schedule::0001, nih-imm-001::annual-requirements::0001, who-imm-001::recommended-vaccines::0001, who-imm-002::recommended-vaccines::0001, cdc-imm-002::influenza-tdap-and-td::0001]
+    g1: []
+    kw: ["every year"]
+  - q: "What immunization information do managers receive about their staff?"
+    kind: direct
+    g2: [nih-imm-001::records-and-privacy::0001]
+    g1: [who-imm-001::documentation-and-records::0001, cdc-imm-001::program-responsibilities::0001, nih-ohs-001::confidentiality::0001]
+    kw: ["compliant"]
+  - q: "What immunity documentation must new staff provide before working in clinical areas?"
+    kind: direct
+    g2: [nih-imm-001::requirements-at-hire::0001]
+    g1: [nih-ohs-001::pre-placement-evaluation::0001, who-ohs-001::health-assessment-before-starting-work::0001]
+    kw: ["measles"]
+
+injection-safety:
+  - q: "Can an infusion bag be used as a shared flush source for several patients?"
+    kind: paraphrase
+    g2: [cdc-inj-001::aseptic-technique::0001, nih-inj-001::syringes-and-needles::0001]
+    g1: []
+    kw: ["one patient"]
+  - q: "Where should injections be prepared?"
+    kind: direct
+    g2: [cdc-inj-001::aseptic-technique::0001, who-inj-001::preparing-injections::0001, nih-inj-001::preparation-area::0001]
+    g1: []
+    kw: ["clean"]
+  - q: "Can a needle be left in a vial septum for later doses?"
+    kind: direct
+    g2: [cdc-inj-001::aseptic-technique::0001, who-inj-001::preparing-injections::0001, nih-inj-001::preparation-area::0001]
+    g1: []
+    kw: ["never"]
+  - q: "What are safe injection practices meant to prevent?"
+    kind: direct
+    g2: [cdc-inj-001::one-needle-one-syringe-only-one-time::0001]
+    g1: [who-tbp-001::standard-precautions::0001, cdc-tbp-002::standard-precautions-for-every-patient::0001]
+    kw: ["bloodborne pathogens"]
+
+ipc-programme:
+  - q: "Who oversees a hospital's infection prevention programme?"
+    kind: direct
+    g2: [who-ipc-001::ipc-programme-and-team::0001, cdc-ipc-001::leadership-and-staffing::0001, nih-ipc-001::mission::0001]
+    g1: []
+    kw: ["committee"]
+  - q: "What topics must a facility's IPC guidelines cover?"
+    kind: acronym
+    g2: [who-ipc-001::guidelines-education-and-training::0001]
+    g1: []
+    kw: ["transmission-based precautions"]
+  - q: "What infrastructure should a facility provide to support infection prevention?"
+    kind: direct
+    g2: [who-ipc-001::workload-staffing-bed-occupancy-and-environment::0001, cdc-ipc-001::environment-and-capacity::0001]
+    g1: []
+    kw: ["hand hygiene stations"]
+  - q: "How often do IPC link nurses get additional training?"
+    kind: acronym
+    g2: [nih-ipc-001::education::0001]
+    g1: []
+    kw: ["quarter"]
+
+outbreak-response:
+  - q: "How do you rule out a pseudo-outbreak?"
+    kind: direct
+    g2: [cdc-ob-001::initial-assessment::0001, cdc-ob-002::initial-assessment::0001]
+    g1: []
+    kw: ["laboratory error"]
+  - q: "What goes into an outbreak case definition?"
+    kind: direct
+    g2: [cdc-ob-001::case-definition-and-line-list::0001, cdc-ob-002::case-definition-and-line-list::0001, who-ob-001::outbreak-investigation-steps::0001, who-ob-002::investigation-steps::0001]
+    g1: []
+    kw: ["place", "time"]
+  - q: "How are patients told that they were exposed during an outbreak?"
+    kind: paraphrase
+    g2: [nih-ob-001::communication-with-patients-and-families::0001]
+    g1: []
+    kw: ["treating team"]
+  - q: "Which laboratory method helps show whether outbreak cases are related?"
+    kind: direct
+    g2: [cdc-ob-001::infection-control-assessment::0001]
+    g1: []
+    kw: ["sequencing"]
+  - q: "What is produced at the end of an outbreak investigation?"
+    kind: direct
+    g2: [who-ob-001::declaring-the-end-of-an-outbreak::0001, who-ob-002::ending-the-outbreak::0001, cdc-ob-001::interventions-and-follow-up::0001, cdc-ob-002::follow-up::0001, nih-ob-001::external-communication-and-closure::0001]
+    g1: []
+    kw: ["final report"]
+  - q: "Who sits on the outbreak management team?"
+    kind: direct
+    g2: [nih-ob-001::activation-of-the-outbreak-team::0001]
+    g1: []
+    kw: ["microbiology"]
+
+occupational-health:
+  - q: "When can staff with shingles care for high-risk patients again?"
+    kind: paraphrase
+    g2: [nih-ohs-001::work-restrictions-for-illness::0001]
+    g1: []
+    kw: ["crusted"]
+  - q: "Do staff get routine yearly tuberculosis tests after they are hired?"
+    kind: direct
+    g2: [nih-ohs-001::tuberculosis-screening::0001]
+    g1: [who-ohs-001::tuberculosis-screening::0001, cdc-ohs-001::onboarding-evaluation::0001]
+    kw: ["not performed"]
+  - q: "What happens after a positive tuberculosis test at hire?"
+    kind: direct
+    g2: [nih-ohs-001::tuberculosis-screening::0001, who-ohs-001::tuberculosis-screening::0001]
+    g1: []
+    kw: ["chest"]
+  - q: "Which symptoms should keep a health worker away from patient care?"
+    kind: direct
+    g2: [nih-ohs-001::work-restrictions-for-illness::0001, who-ohs-001::working-while-ill::0001, cdc-ohs-001::gastrointestinal-illness::0001]
+    g1: [cdc-ohs-001::influenza-like-illness::0001]
+    kw: ["fever"]
+
+ppe:
+  - q: "Where should a respirator be taken off after caring for a patient?"
+    kind: direct
+    g2: [who-ppe-002::doffing-sequence::0001, nih-ppe-002::taking-ppe-off::0001]
+    g1: [who-ppe-001::doffing-sequence::0001]
+    kw: ["leave"]
+  - q: "What makes a new respirator fit test necessary?"
+    kind: direct
+    g2: [nih-ppe-001::fit-testing::0001, who-ppe-002::respirator-fit-testing-and-seal-checks::0001, cdc-ppe-002::fit-testing::0001]
+    g1: []
+    kw: ["change"]
+  - q: "When is a fluid-resistant gown needed?"
+    kind: direct
+    g2: [who-ppe-002::principles-of-ppe-selection::0001]
+    g1: [cdc-ppe-001::selecting-ppe::0001, nih-ppe-002::choosing-ppe::0001]
+    kw: ["large volumes"]
+  - q: "When should gloves be worn?"
+    kind: direct
+    g2: [who-ppe-002::principles-of-ppe-selection::0001, cdc-ppe-001::selecting-ppe::0001, nih-ppe-002::choosing-ppe::0001]
+    g1: [who-ppe-001::principles-of-ppe-selection::0001]
+    kw: ["blood"]
+  - q: "What should be done with reusable goggles after use?"
+    kind: paraphrase
+    g2: [who-ppe-002::doffing-sequence::0001, nih-ppe-002::after-use::0001]
+    g1: []
+    kw: ["disinfected"]
+
+sharps-safety:
+  - q: "When is follow-up HIV testing done after a needlestick exposure?"
+    kind: acronym
+    g2: [cdc-shp-001::hiv-post-exposure-prophylaxis::0001]
+    g1: []
+    kw: ["6 weeks"]
+  - q: "What do unvaccinated staff receive after exposure to a hepatitis B positive source?"
+    kind: direct
+    g2: [cdc-shp-001::hepatitis-b-and-c-management::0001, nih-shp-002::post-exposure-prophylaxis::0001, who-shp-001::post-exposure-assessment-and-prophylaxis::0001]
+    g1: []
+    kw: ["immune globulin"]
+  - q: "Which safety-engineered sharps devices should be used?"
+    kind: direct
+    g2: [nih-shp-001::device-selection::0001, cdc-shp-002::safer-devices::0001]
+    g1: [who-shp-001::safe-work-practices::0001]
+    kw: ["retractable"]
+  - q: "How should sharps be passed during surgery?"
+    kind: direct
+    g2: [who-shp-001::safe-work-practices::0001, nih-shp-001::safe-handling-in-patient-care-and-research::0001, cdc-shp-002::passing-instruments::0001]
+    g1: []
+    kw: ["neutral zone"]
+  - q: "Where should sharps containers be mounted?"
+    kind: direct
+    g2: [who-shp-001::sharps-containers::0001, nih-shp-001::sharps-containers::0001, cdc-shp-002::sharps-containers::0001]
+    g1: []
+    kw: ["arm's reach"]
+  - q: "Who must a needlestick injury be reported to?"
+    kind: direct
+    g2: [nih-shp-001::reporting-an-injury::0001, nih-shp-002::report-immediately::0001, who-shp-001::immediate-actions-after-exposure::0001]
+    g1: [cdc-shp-001::first-aid::0001]
+    kw: ["supervisor"]
+
+sterilization:
+  - q: "How are heat-sensitive devices sterilized?"
+    kind: direct
+    g2: [who-ster-001::steam-sterilization-parameters::0001]
+    g1: []
+    kw: ["hydrogen peroxide"]
+  - q: "What do chemical indicators on a pack show?"
+    kind: direct
+    g2: [cdc-ster-001::mechanical-and-chemical-indicators::0001]
+    g1: []
+    kw: ["do not prove sterility"]
+  - q: "What kinds of indicators are used to monitor sterilization?"
+    kind: direct
+    g2: [cdc-ster-001::purpose::0001, who-ster-001::monitoring-sterilization::0001, cdc-ster-001::mechanical-and-chemical-indicators::0001]
+    g1: [cdc-ster-001::biological-indicators::0001, nih-ster-001::packaging-and-loading::0001]
+    kw: ["biological"]
+  - q: "What should the team do with instruments right after a procedure?"
+    kind: paraphrase
+    g2: [nih-ster-001::point-of-use-treatment::0001]
+    g1: [nih-ster-002::cleaning-comes-first::0001, who-ster-001::the-decontamination-cycle::0001]
+    kw: ["moist"]
+  - q: "How many empty test cycles are needed after a sterilizer is repaired?"
+    kind: direct
+    g2: [cdc-ster-001::biological-indicators::0001]
+    g1: []
+    kw: ["three"]
+  - q: "Can a pack that is still wet after sterilization be used?"
+    kind: paraphrase
+    g2: [who-ster-001::steam-sterilization-parameters::0001, cdc-ster-002::cycle-parameters::0001]
+    g1: []
+    kw: ["dry"]
+
+transmission-based-precautions:
+  - q: "Which patients get priority for single rooms under contact precautions?"
+    kind: direct
+    g2: [cdc-tbp-001::contact-precautions::0001]
+    g1: []
+    kw: ["incontinence"]
+  - q: "Should staff who are not immune to measles care for a measles patient?"
+    kind: direct
+    g2: [cdc-tbp-001::airborne-precautions::0001, nih-tbp-001::staff-protection::0001, who-tbp-001::airborne-precautions::0001]
+    g1: []
+    kw: ["immun"]
+  - q: "How often is negative pressure in an isolation room checked?"
+    kind: direct
+    g2: [nih-tbp-001::airborne-infection-isolation-rooms::0001]
+    g1: []
+    kw: ["daily"]
+  - q: "What type of precautions are used for influenza patients?"
+    kind: direct
+    g2: [who-tbp-001::droplet-precautions::0001]
+    g1: [cdc-tbp-001::droplet-precautions::0001, cdc-tbp-002::droplet-precautions::0001, nih-tbp-002::starting-isolation::0001]
+    kw: ["droplet"]
+  - q: "Should isolation precautions start before the diagnosis is confirmed?"
+    kind: paraphrase
+    g2: [cdc-tbp-001::two-tiers-of-precautions::0001, nih-tbp-001::indications::0001, nih-tbp-002::starting-isolation::0001]
+    g1: []
+    kw: ["suspicion"]
+  - q: "What do health workers wear for patients on droplet precautions?"
+    kind: direct
+    g2: [cdc-tbp-001::droplet-precautions::0001, who-tbp-001::droplet-precautions::0001, cdc-tbp-002::droplet-precautions::0001, nih-tbp-002::starting-isolation::0001]
+    g1: []
+    kw: ["mask"]
+
+waste-management:
+  - q: "What colour container is used for cytotoxic waste?"
+    kind: direct
+    g2: [who-hcw-001::segregation-and-colour-coding::0001, who-hcw-002::use-the-right-container::0001]
+    g1: [nih-hcw-001::pharmaceutical-and-hazardous-drug-waste::0001]
+    kw: ["purple"]
+  - q: "How quickly are full chemical waste containers collected?"
+    kind: direct
+    g2: [nih-hcw-001::chemical-waste::0001]
+    g1: []
+    kw: ["3 days"]
+  - q: "Is open burning of health care waste acceptable?"
+    kind: direct
+    g2: [who-hcw-001::treatment-and-disposal::0001, who-hcw-002::treatment::0001]
+    g1: []
+    kw: ["not acceptable"]
+  - q: "How often should waste be collected from clinical areas?"
+    kind: direct
+    g2: [who-hcw-001::collection-and-storage::0001, who-hcw-002::storage-time::0001]
+    g1: []
+    kw: ["daily"]
+  - q: "Where and by whom should health care waste be segregated?"
+    kind: direct
+    g2: [who-hcw-001::segregation-and-colour-coding::0001, who-hcw-002::use-the-right-container::0001, nih-hcw-001::principles::0001]
+    g1: [who-hcw-001::waste-categories::0001, who-hcw-002::know-the-categories::0001]
+    kw: ["point of generation"]
+  - q: "Can liquid blood be poured down a sanitary sewer?"
+    kind: direct
+    g2: [cdc-hcw-001::treatment-methods::0001]
+    g1: []
+    kw: ["sanitary sewer"]
+
+out-of-scope:
+  - q: "How long should a urinary catheter stay in after hip replacement surgery?"
+    kind: unanswerable
+  - q: "What is the incubation period of measles?"
+    kind: unanswerable
+  - q: "Which disinfectant is effective against Candida auris?"
+    kind: unanswerable
+  - q: "What is the hepatitis A vaccine schedule for health workers?"
+    kind: unanswerable
+  - q: "How often should hospital water systems be tested for Legionella?"
+    kind: unanswerable
+  - q: "What is the maximum shift length for nurses?"
+    kind: unanswerable
+  - q: "What dose of oseltamivir is used for influenza prophylaxis?"
+    kind: unanswerable
+  - q: "How do I treat a burn from boiling water?"
+    kind: unanswerable
+  - q: "What time does the hospital cafeteria open?"
+    kind: unanswerable
+  - q: "How many vacation days do hospital staff get?"
+    kind: unanswerable
+  - q: "Which mobile phone has the best camera?"
+    kind: unanswerable
+  - q: "What are the symptoms of dengue fever?"
+    kind: unanswerable

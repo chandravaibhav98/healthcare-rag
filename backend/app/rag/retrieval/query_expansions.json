@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "description": "Deterministic query expansion (ADR-0004). Acronyms expand both ways; every member of a synonym group adds the others. Matching is on lower-case word tokens. Changing this file changes retrieval results: bump version and re-run evaluation.",
   "acronyms": {
     "abhr": "alcohol-based handrub",
@@ -39,6 +39,11 @@
     ["program", "programme"],
     ["hospitalization", "hospitalisation"],
     ["how long", "duration"],
-    ["how often", "frequency"]
+    ["how often", "frequency"],
+    ["influenza", "flu"],
+    ["artificial nails", "fake nails", "false nails"],
+    ["facial hair", "beard"],
+    ["clostridioides difficile", "c. diff", "c diff", "clostridium difficile"],
+    ["domestic", "household", "kitchen"]
   ]
 }

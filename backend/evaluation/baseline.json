@@ -1,0 +1,13 @@
+{
+  "index_version": "6ce73ffaf982",
+  "p@5": 0.6016,
+  "p@5_ceiling": 0.8262,
+  "p@5_of_ceiling": 0.7282,
+  "hit@5": 0.9918,
+  "mrr": 0.8956,
+  "ndcg@5": 0.7897,
+  "pass_rate": 0.9262,
+  "grounded_pass_rate": 0.8934,
+  "false_validation_rate": 0.0,
+  "mean_confidence": 0.7599
+}

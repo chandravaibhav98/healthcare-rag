@@ -1,6 +1,6 @@
 # ADR-0004 — Hybrid retrieval: FAISS dense + BM25, fused with RRF
 
-- **Status:** Accepted (implemented in Phase 2, 2026-11-07; the linear blend is still compared in Phase 4)
+- **Status:** Accepted (implemented in Phase 2, 2026-11-07). **Ranking default amended by [ADR-0011](0011-bm25-ranking-default.md)** (Phase 4: BM25 ranks, dense vote 0).
 - **Date:** 2026-11-07
 - **Plan ref:** `plan.md` §3 ADR-004, §4 Phase 2 · **Affects:** SC2
 

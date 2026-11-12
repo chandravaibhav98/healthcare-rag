@@ -1,4 +1,4 @@
-# Corpus Card — Synthetic Guideline Corpus v1
+# Corpus Card — Synthetic Guideline Corpus v2
 
 > ⚠️ **Every document in this folder is synthetic.** The texts are written in the *style*
 > of WHO, CDC and NIH infection-prevention guidance for software development and
@@ -13,17 +13,36 @@
 | Authoring | LLM-assisted drafting (project readiness Q6), reviewed and frozen on 2026-11-07 |
 | Real source text | None copied. Wording is original. Facts reflect widely published IPC concepts at a general level |
 | Change policy | Frozen. Never regenerated at build time (SC1). Edits are deliberate commits and change `index_version` |
+| v2 (2026-11-12, Phase 4) | 30 documents added: WHO pocket guides, CDC quick references and NIH ward procedures (§2a) |
 | Licence | Same as the repository |
 
 ## 2. Shape
 
 | Measure | Value |
 | --- | --- |
-| Documents | 42 (WHO 14 · CDC 14 · NIH 14) |
-| Topics | 15 (12 core topics covered by all three organisations) |
+| Documents | 72 (WHO 25 · CDC 25 · NIH 22); v1 had 42 |
+| Topics | 15 (all 15 now covered by all three organisations) |
 | Superseded/current pairs | 3 (deliberate conflicts, §5) |
-| Chunks (default config 80–160 tokens) | 209 (median 72 tokens; 1 of 208 sections needed splitting) |
+| Chunks (default config 80–160 tokens) | 346 (v1: 209); `index_version` 6ce73ffaf982 |
 | Build | `scripts/build-index.sh --inspect` · `index_version` is printed and stored in `manifest.json` |
+
+## 2a. Why v2 exists, and its risk
+
+Precision@5 can only reach 0.65 if questions have, on average, more than 3.25 relevant
+chunks (ADR-0001). With honest labels, v1 gave 2.7 per question and capped P@5 at 0.54
+for a perfect retriever. Real guideline repositories repeat core guidance across many
+documents (full guideline, pocket guide, quick-reference card, local ward procedure),
+so v2 adds that layer: 30 documents, mostly 4–5 short sections each, that restate each
+topic's core guidance with the same values as the parent organisation's main document.
+They are written as procedures and summaries, never as question-and-answer FAQs, which
+would make retrieval artificially easy.
+
+**Risk, stated plainly:** v2 was written after the v1 gold questions existed, by the same
+person, so the new documents could favour those questions. Mitigations: the documents
+cover each topic's guidance broadly rather than the questions; the labels were extended
+by reading every new chunk with the unchanged grading guide; the final claims rest on a
+second test set (test-v2) written *after* v2 and before any further tuning
+(`backend/evaluation/datasets/DATASET_CARD.md`).
 
 ## 3. File conventions (enforced by `backend/app/rag/ingestion/loader.py`)
 
@@ -56,27 +75,28 @@ synthetic: true                   # REQUIRED and must be true
 
 | Topic | WHO | CDC | NIH |
 | --- | --- | --- | --- |
-| `aefi-reporting` | who-aefi-001 | cdc-aefi-001 | nih-aefi-001 |
-| `cold-chain` | who-cc-001 | cdc-cc-001†, cdc-cc-002 | nih-cc-001 |
-| `device-associated-infections` | who-dai-001 | cdc-dai-001 | nih-dai-001 |
-| `environmental-cleaning` | who-env-001 | cdc-env-001 | nih-env-001 |
-| `hand-hygiene` | who-hh-001 | cdc-hh-001 | nih-hh-001†, nih-hh-002 |
-| `immunization-schedules` | who-imm-001 | cdc-imm-001 | nih-imm-001 |
-| `injection-safety` | — | cdc-inj-001 | — |
-| `ipc-programme` | who-ipc-001 | — | — |
-| `occupational-health` | who-imm-001 | cdc-shp-001 | nih-imm-001, nih-ohs-001, nih-ppe-001 |
-| `outbreak-response` | who-ob-001 | cdc-ob-001 | nih-ob-001 |
-| `ppe` | who-ppe-001†, who-ppe-002 | cdc-ppe-001 | nih-ppe-001 |
-| `sharps-safety` | who-shp-001 | cdc-shp-001 | nih-shp-001 |
-| `sterilization` | who-ster-001 | cdc-ster-001 | nih-ster-001 |
-| `transmission-based-precautions` | who-tbp-001 | cdc-tbp-001 | nih-tbp-001 |
-| `waste-management` | who-hcw-001 | cdc-hcw-001 | nih-hcw-001 |
+| `aefi-reporting` | who-aefi-001, who-aefi-002 | cdc-aefi-001, cdc-aefi-002 | nih-aefi-001 |
+| `cold-chain` | who-cc-001, who-cc-002 | cdc-cc-001†, cdc-cc-002 | nih-cc-001, nih-cc-002 |
+| `device-associated-infections` | who-dai-001, who-dai-002 | cdc-dai-001 | nih-dai-001, nih-dai-002 |
+| `environmental-cleaning` | who-env-001, who-env-002 | cdc-env-001 | nih-env-001, nih-env-002 |
+| `hand-hygiene` | who-hh-001, who-hh-002 | cdc-hh-001 | nih-hh-001†, nih-hh-002, nih-hh-003 |
+| `immunization-schedules` | who-imm-001, who-imm-002 | cdc-imm-001, cdc-imm-002 | nih-imm-001 |
+| `injection-safety` | who-inj-001 | cdc-inj-001 | nih-inj-001 |
+| `ipc-programme` | who-ipc-001 | cdc-ipc-001 | nih-ipc-001 |
+| `occupational-health` | who-imm-001, who-imm-002, who-ohs-001 | cdc-shp-001, cdc-imm-002, cdc-ohs-001, cdc-ppe-002 | nih-imm-001, nih-ohs-001, nih-ppe-001, nih-shp-002 |
+| `outbreak-response` | who-ob-001, who-ob-002 | cdc-ob-001, cdc-ob-002 | nih-ob-001 |
+| `ppe` | who-ppe-001†, who-ppe-002 | cdc-ppe-001, cdc-ppe-002 | nih-ppe-001, nih-ppe-002 |
+| `sharps-safety` | who-shp-001 | cdc-shp-001, cdc-shp-002 | nih-shp-001, nih-shp-002 |
+| `sterilization` | who-ster-001 | cdc-ster-001, cdc-ster-002 | nih-ster-001, nih-ster-002 |
+| `transmission-based-precautions` | who-tbp-001 | cdc-tbp-001, cdc-tbp-002 | nih-tbp-001, nih-tbp-002 |
+| `waste-management` | who-hcw-001, who-hcw-002 | cdc-hcw-001, cdc-hcw-002 | nih-hcw-001 |
 
 **Why three organisations per core topic:** ADR-0001 needs at least 4 relevant chunks per
 answerable question for Precision@5 ≥ 0.65 to be achievable. Chunks here are roughly
 section-sized, so a question such as *"how long should handrub be applied?"* is
 answered by the matching section in each organisation's document (plus any superseded
-version), which gives 3–5 relevant chunks.
+version). In practice v1 gave only 2.7 relevant chunks per question, which is why v2
+(§2a) added a second layer of documents; the v2 dev labels average 4.5 (P@5 ceiling 0.83).
 
 ## 5. Deliberate conflicts (superseded → current)
 

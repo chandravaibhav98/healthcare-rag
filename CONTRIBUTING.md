@@ -49,6 +49,7 @@ identical flags). CI calls the same scripts, so "green locally" means "green in 
 | Environment check | `scripts/preflight.sh` · `pwsh scripts/preflight.ps1` |
 | Run API + web locally | `scripts/dev.sh` · `pwsh scripts/dev.ps1` |
 | Smoke-test a running API (+ `--bench N`) | `scripts/smoke.sh` · `pwsh scripts/smoke.ps1` |
+| Evaluation scorecard and regression gate | `scripts/eval.sh` · `pwsh scripts/eval.ps1` |
 
 A new script must ship as a `.sh` + `.ps1` pair, support `--help`, be idempotent, and
 return non-zero on failure. Shared helpers live in `scripts/lib/`.
