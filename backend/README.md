@@ -17,6 +17,7 @@ The FastAPI service and the RAG domain library. The full layout is in `plan.md` 
 | `app/repositories/` | Data access with shared pagination | 5 ✅ |
 | `app/services/` (auth, config, index, eval, admin, maintenance, query-log writer) | Phase 5 use cases | 5 ✅ |
 | `app/api/routes/auth.py`, `app/api/routes/admin/` | Auth and admin API (RBAC per route) | 5 ✅ |
+| `app/api/routes/escalations.py`, `migrations/versions/0002_*` | User escalation to the review queue (contract 1.3) | 6 ✅ |
 | `app/core/security.py`, `app/core/redaction.py` | argon2id + JWT; PHI redaction before persistence | 5 ✅ |
 
 ```bash

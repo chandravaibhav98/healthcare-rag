@@ -17,6 +17,7 @@ def test_qa_works_and_persistence_routes_are_503(app_factory: AppFactory) -> Non
             ("POST", "/api/v1/auth/login"),
             ("GET", "/api/v1/admin/stats"),
             ("GET", "/api/v1/auth/me"),
+            ("POST", "/api/v1/escalations"),
         ]:
             resp = client.request(method, path, json={"email": "a@b.co", "password": "x"})
             assert resp.status_code in (401, 503), (path, resp.status_code)

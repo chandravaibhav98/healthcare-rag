@@ -455,26 +455,28 @@ Even with a synthetic corpus, users could type real patient information into que
 
 **Deliverables checklist — Query Assistant**
 
-- [ ] Question input with `top_k` control, keyboard submit, and loading, error and empty states
-- [ ] Answer card: **status badge** (validated or needs-review), **confidence meter** with a signal breakdown tooltip, inline `[n]` citation chips
-- [ ] **Evidence panel:** clicking a citation shows the source chunk with **overlapping tokens highlighted** and numbers checked, so the user can see exactly why the answer was validated
-- [ ] Abstention UX: clear message, candidate sources shown, an "escalate for review" action
-- [ ] Session query history in the sidebar, copy answer with citations, persistent clinical disclaimer banner
+- [x] Question input with `top_k` control, keyboard submit, and loading, error and empty states
+- [x] Answer card: **status badge** (validated or needs-review), **confidence meter** with a signal breakdown tooltip, inline `[n]` citation chips
+- [x] **Evidence panel:** clicking a citation shows the source chunk with **overlapping tokens highlighted** and numbers checked, so the user can see exactly why the answer was validated
+- [x] Abstention UX: clear message, candidate sources shown, an "escalate for review" action
+- [x] Session query history in the sidebar, copy answer with citations, persistent clinical disclaimer banner
 
 **Deliverables checklist — Admin Dashboard (reviewer and admin roles)**
 
-- [ ] **Overview:** KPI tiles (queries, pass rate, mean confidence, abstention rate, p95 latency), trend charts, confidence distribution, top topics
-- [ ] **Review Queue:** pending `needs_review` items, side-by-side question, candidate answer and evidence, approve, reject or correct, promote to the gold set
-- [ ] **Query Explorer:** filters (status, confidence range, date, index version), detail drawer
-- [ ] **Evaluation:** run history, P@K and pass-rate trend, threshold sweep chart, low-confidence list, "run evaluation" button
-- [ ] **Index & Corpus:** versions with manifest hashes, activate a version, document inventory, rebuild (dev)
-- [ ] **Settings:** threshold and weights editor showing the impact preview from the last sweep, audited
-- [ ] **Audit Log:** filterable table
-- [ ] Route guards by role, 403 page, responsive layout, dark mode
-- [ ] Accessibility: WCAG 2.2 AA, keyboard navigation, axe checks in tests
-- [ ] Vitest + React Testing Library + MSW tests for key components and hooks; stable `data-testid` attributes for Playwright
+- [x] **Overview:** KPI tiles (queries, pass rate, mean confidence, abstention rate, p95 latency), trend charts, confidence distribution, top topics
+- [x] **Review Queue:** pending `needs_review` items, side-by-side question, candidate answer and evidence, approve, reject or correct, promote to the gold set
+- [x] **Query Explorer:** filters (status, confidence range, date, index version), detail drawer
+- [x] **Evaluation:** run history, P@K and pass-rate trend, threshold sweep chart, low-confidence list, "run evaluation" button
+- [x] **Index & Corpus:** versions with manifest hashes, activate a version, document inventory, rebuild (dev)
+- [x] **Settings:** threshold and weights editor showing the impact preview from the last sweep, audited
+- [x] **Audit Log:** filterable table
+- [x] Route guards by role, 403 page, responsive layout, dark mode
+- [x] Accessibility: WCAG 2.2 AA, keyboard navigation, axe checks in tests
+- [x] Vitest + React Testing Library + MSW tests for key components and hooks; stable `data-testid` attributes for Playwright
 
 **Exit criteria:** all screens work against the real API, axe reports no serious violations, and Lighthouse accessibility scores 95 or higher.
+
+**Status (2026-11-14):** ✅ done. 12/12 browser flows pass against the real API; axe 0 violations (light and dark); Lighthouse accessibility 100 on all 9 routes. See `docs/project/phase-6-report.md`.
 
 ---
 
@@ -760,6 +762,7 @@ owning phase · 🟢 tracked, low risk
 | OI-18 | **Concepts that never co-occur** pass bag-of-terms support ("incubation period of measles": both terms exist, never together) | False validation on test-v2 | Phase 4.1: require the question's main concepts in the same cited sentence or chunk; optional offline entailment check (ADR-0002 option C) | 🔴 |
 | OI-21 | test-v2 is spent; any new claim needs a fresh held-out **test-v3**, written before the next tuning round | DATASET_CARD §5 | Phase 4.1 | 🟠 |
 | OI-22 | Paraphrase questions validate least often (test-v2: 0.62 vs 0.83 direct) | Evaluation report §6 | Phase 4.1: more lay synonyms from dev; revisit a stronger offline embedder | 🟠 |
+| OI-27 | **Near-domain false validation found in the UI audit:** "What is the recommended dose of the yellow fever vaccine?" (not in the corpus) was validated at confidence 0.6005 with an answer listing *other* vaccines' doses. Same class as OI-18 (key terms present, never together). At τ = 0.65 it abstains | Phase 6 UI audit | Phase 4.1: OI-18 fix (concepts in the same cited sentence); add this question to test-v3 | 🔴 |
 | OI-8 | Coverage is ≈ 1.0 for every extractive answer, so its 0.20 weight is a near-constant | ADR-0002 | Informative only with the optional LLM generator | 🟢 |
 | OI-9 | Noise in a question (e.g. a patient name) lowers query support and can cause an abstention (fails safe); not yet measured | Phase 3 log probe | Add noisy paraphrases to test-v3 | 🟢 |
 | OI-10 | `SvdEmbedder` ablation not built | Deferred from Phase 1 | Cut (plan §7) unless time allows | 🟢 |
@@ -777,6 +780,8 @@ owning phase · 🟢 tracked, low risk
 | OI-24 | ADR-0008 names an `AuthProvider` protocol for OIDC; only local accounts exist. Needed before connecting the organisation's identity provider | Phase 12 (RUNBOOK) or later | 🟢 |
 | OI-25 | `/admin/stats` aggregates in Python from one windowed query; fine to about 1M rows per window, then move to SQL aggregates or a daily rollup table | When volume requires | 🟢 |
 | OI-26 | Windows CI cannot run Linux containers, so the PostgreSQL test variants run on Linux only (SQLite runs on both) | Phase 10 | 🟢 |
+| OI-29 | The browser accessibility audit (`e2e/audit/ui-audit.mjs`) needs Chrome and a running stack, so it is not yet in CI. Move it into the Phase 7 Playwright job (kind or compose) | Phase 7 | 🟠 |
+| OI-30 | The SPA bundle (gzip): 63 kB app + 78 kB React + 37 kB forms; dashboard adds 13 kB + 118 kB charts. Fine for an internal tool; measure on a slow profile before any public deployment | Phase 7 (performance) | 🟢 |
 
 Closed in Phase 4 (outcomes in `docs/project/phase-4-report.md` §4): OI-3, OI-4, OI-5,
 OI-6, OI-7. Closed in Phase 5 (`docs/project/phase-5-report.md` §4): OI-12.

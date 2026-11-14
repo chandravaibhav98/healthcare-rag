@@ -19,8 +19,9 @@ replaced by an organisation's secure guideline repository.
 | Phase 2: retrieval and extractive QA core | ✅ Hybrid RRF + expansion, 15/15 smoke hit@5 ([report](docs/project/phase-2-report.md)) |
 | Phase 3: validation engine and `/qa` API | ✅ Live `/qa`, abstention, probes, metrics; p95 ≈ 11 ms over HTTP ([report](docs/project/phase-3-report.md)) |
 | Phase 4: evaluation and threshold tuning | ✅ Harness + CI gate. Held-out: SC3 met (0.807); SC2 P@5 0.417 vs ceiling 0.583 (decision pending); 2/12 false validations ([report](docs/project/phase-4-report.md), [evaluation](docs/evaluation-report.md)) |
-| **Phase 5: persistence, auth and admin APIs** | ✅ SQLite/PostgreSQL, JWT + RBAC, 17 admin routes, audited runtime tuning, PHI redaction + retention ([report](docs/project/phase-5-report.md)) |
-| Phase 6: React assistant and admin dashboard | ⏭️ Next |
+| Phase 5: persistence, auth and admin APIs | ✅ SQLite/PostgreSQL, JWT + RBAC, 17 admin routes, audited runtime tuning, PHI redaction + retention ([report](docs/project/phase-5-report.md)) |
+| **Phase 6: React assistant and admin dashboard** | ✅ Assistant with evidence view and escalation, 7-section dashboard; Lighthouse a11y 100 on every route, axe clean in light and dark ([report](docs/project/phase-6-report.md)) |
+| Phase 7: test hardening and quality gates | ⏭️ Next |
 
 ## Quick start
 
@@ -55,7 +56,7 @@ Details: [`plan.md`](plan.md) §2 · decisions: [`docs/adr/`](docs/adr/README.md
 ```bash
 scripts/build-index.sh           # once, and after any corpus change
 scripts/seed.sh --demo           # migrate the database, admin + demo accounts and history
-scripts/dev.sh --api-only        # API on http://127.0.0.1:8000, Swagger UI at /docs
+scripts/dev.sh                   # API on :8000 (Swagger at /docs) + web app on http://localhost:5173
 scripts/smoke.sh                 # in a second terminal: probes, both /qa paths, schema
 ```
 
@@ -75,7 +76,7 @@ curl -s -X POST http://127.0.0.1:8000/api/v1/qa \
   -d '{"question": "How long can a multi-dose vial be used after opening?", "top_k": 5}'
 ```
 
-## API contract v1.2
+## API contract v1.3
 
 `POST /api/v1/qa` (alias `POST /qa`). Request `{ "question": str, "top_k": 1–20 }`.
 Response `{ answer, citations, confidence, status ∈ {validated, needs_review}, meta }`.
@@ -92,7 +93,7 @@ that matches the `X-Request-ID` response header. Operational endpoints: `GET /he
 `GET /readyz`, `GET /version`, `GET /metrics` (Prometheus). The committed snapshot is
 [`backend/openapi.json`](backend/openapi.json).
 
-Since 1.2 (all additive):
+Since 1.2 and 1.3 (all additive):
 
 - **Auth** `POST /api/v1/auth/login`, `/refresh` (rotating, httpOnly cookie), `/logout`,
   `GET /api/v1/auth/me`. `/qa` accepts an optional bearer token and answers 401 only when
@@ -102,6 +103,9 @@ Since 1.2 (all additive):
   `index/rebuild` (development only), `documents`, `config` (audited runtime threshold and
   weights), `audit-log`. Lists share one envelope `{items, total, limit, offset}` with
   `limit`, `offset`, `sort`, `order`.
+- **Escalation** (1.3) `POST /api/v1/escalations` `{request_id, note}`: a user asks a
+  reviewer to check an answer; it joins the review queue. `stats` gained a confidence
+  histogram.
 
 ## Repository layout
 
@@ -130,6 +134,7 @@ Since 1.2 (all additive):
 | `eval` | Evaluation scorecard (SC2, SC3, false validations); `--gate` for CI, `--split test` once per frozen config |
 | `db-migrate` | Alembic migrations for `DATABASE_URL` (`--revision`, `--downgrade`, `--current`) |
 | `seed` | Migrate, then the admin account; `--demo` adds reviewer/user accounts and a week of history (`--reset`, `--reset-password`) |
+| `gen-client` | Export `backend/openapi.json` and regenerate the frontend's TypeScript API types (`--check` for CI) |
 
 More scripts arrive with later phases (`plan.md` §5).
 
@@ -138,7 +143,22 @@ More scripts arrive with later phases (`plan.md` §5).
 All settings come from environment variables or `.env`. Every key is documented in
 [`.env.example`](.env.example) and validated by `backend/app/core/config.py`.
 
-## Note on the UI
+## The web app
 
-The brief lists an optional Streamlit UI. This project replaces it with a React SPA
-(Phase 6) that includes an admin dashboard.
+![Query Assistant: validated answer with the evidence panel](docs/project/phase-6-ui/assistant-validated.png)
+
+- **Query Assistant** (`/`): ask with Enter, choose `top_k`; the answer card shows the
+  status badge, a confidence meter with the signal breakdown, and `[n]` citation chips.
+  The evidence panel shows the cited chunk with the words it shares with the answer
+  highlighted and every number checked. Abstentions explain why, list the closest
+  sources and offer **Escalate for review**. Session history, copy with sources, and a
+  permanent "not for clinical use" banner.
+- **Dashboard** (`/admin`, reviewer or admin): overview KPIs and charts, review queue
+  (side-by-side evidence, approve/reject/correct, promote to gold), query explorer
+  with a detail drawer, evaluation runs with the threshold sweep and low-confidence
+  list, index versions and corpus inventory, audited settings with an impact preview,
+  and the audit log (admin).
+- Dark mode, responsive down to 390 px, WCAG 2.2 AA (Lighthouse accessibility 100 on
+  every route). Details: [frontend/README.md](frontend/README.md).
+
+The brief lists an optional Streamlit UI. This React SPA replaces it.

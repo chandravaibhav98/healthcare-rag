@@ -35,6 +35,9 @@ class QueryFilter:
     promoted: bool | None = None
     #: Review queue "all": abstained OR reviewed (validated answers can be reviewed too).
     needs_review_or_reviewed: bool = False
+    escalated: bool | None = None
+    #: Review queue "pending": abstained OR escalated by a user, and not reviewed yet.
+    awaiting_review: bool = False
 
 
 def _apply(stmt: Select[Any], f: QueryFilter) -> Select[Any]:
@@ -66,7 +69,18 @@ def _apply(stmt: Select[Any], f: QueryFilter) -> Select[Any]:
         stmt = stmt.where(with_verdict)
     if f.needs_review_or_reviewed:
         any_review = select(Review.id).where(Review.query_id == QueryLog.id).exists()
-        stmt = stmt.where(or_(QueryLog.status == "needs_review", any_review))
+        stmt = stmt.where(
+            or_(QueryLog.status == "needs_review", QueryLog.escalated_at.is_not(None), any_review)
+        )
+    if f.escalated is not None:
+        stmt = stmt.where(
+            QueryLog.escalated_at.is_not(None) if f.escalated else QueryLog.escalated_at.is_(None)
+        )
+    if f.awaiting_review:
+        any_review = select(Review.id).where(Review.query_id == QueryLog.id).exists()
+        stmt = stmt.where(
+            or_(QueryLog.status == "needs_review", QueryLog.escalated_at.is_not(None)), ~any_review
+        )
     if f.promoted is not None:
         with_flag = (
             select(Review.id)
@@ -107,3 +121,8 @@ async def window_rows(session: AsyncSession, since: datetime, until: datetime) -
 async def delete_older_than(session: AsyncSession, cutoff: datetime) -> int:
     result = await session.execute(delete(QueryLog).where(QueryLog.created_at < cutoff))
     return int(result.rowcount or 0)  # type: ignore[attr-defined]
+
+
+async def get_by_request_id(session: AsyncSession, request_id: str) -> QueryLog | None:
+    stmt = select(QueryLog).where(QueryLog.request_id == request_id).limit(1)
+    return (await session.execute(stmt)).scalar_one_or_none()

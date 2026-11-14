@@ -58,6 +58,7 @@ if ((DO_FRONTEND)); then
     run_step "prettier --check" npm --prefix "$FRONTEND_DIR" run -s format:check
   fi
   run_step "tsc --noEmit" npm --prefix "$FRONTEND_DIR" run -s typecheck
+  run_step "API types current" npm --prefix "$FRONTEND_DIR" run -s gen:api:check
 fi
 
 finish_steps "Lint"

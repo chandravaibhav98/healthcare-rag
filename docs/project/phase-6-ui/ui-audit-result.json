@@ -1,0 +1,205 @@
+{
+  "flows": [
+    ["assistant: validated answer", "ok"],
+    ["assistant: abstention + escalate", "ok"],
+    ["login as admin", "ok"],
+    ["overview", "ok"],
+    ["review queue: escalated item present, approve it", "ok"],
+    ["query explorer: filter + drawer", "ok"],
+    ["evaluation: run to completion", "ok"],
+    ["index & corpus", "ok"],
+    ["settings: impact preview + save", "ok"],
+    ["audit log shows the UI actions", "ok"],
+    ["mobile layout (390px) has no horizontal page overflow", "ok"],
+    ["403 for a plain user", "ok"]
+  ],
+  "lighthouse": [
+    {
+      "page": "/",
+      "accessibility": 100,
+      "bestPractices": 100,
+      "failed": []
+    },
+    {
+      "page": "/login",
+      "accessibility": 100,
+      "bestPractices": 100,
+      "failed": []
+    },
+    {
+      "page": "/admin",
+      "accessibility": 100,
+      "bestPractices": 100,
+      "failed": []
+    },
+    {
+      "page": "/admin/review",
+      "accessibility": 100,
+      "bestPractices": 100,
+      "failed": []
+    },
+    {
+      "page": "/admin/queries",
+      "accessibility": 100,
+      "bestPractices": 100,
+      "failed": []
+    },
+    {
+      "page": "/admin/evaluation",
+      "accessibility": 100,
+      "bestPractices": 100,
+      "failed": []
+    },
+    {
+      "page": "/admin/index",
+      "accessibility": 100,
+      "bestPractices": 100,
+      "failed": []
+    },
+    {
+      "page": "/admin/settings",
+      "accessibility": 100,
+      "bestPractices": 100,
+      "failed": []
+    },
+    {
+      "page": "/admin/audit",
+      "accessibility": 100,
+      "bestPractices": 100,
+      "failed": []
+    }
+  ],
+  "axe": [
+    {
+      "page": "assistant (validated)",
+      "theme": "light",
+      "violations": []
+    },
+    {
+      "page": "assistant (validated)",
+      "theme": "dark",
+      "violations": []
+    },
+    {
+      "page": "escalate dialog",
+      "theme": "light",
+      "violations": []
+    },
+    {
+      "page": "escalate dialog",
+      "theme": "dark",
+      "violations": []
+    },
+    {
+      "page": "assistant (abstained)",
+      "theme": "light",
+      "violations": []
+    },
+    {
+      "page": "assistant (abstained)",
+      "theme": "dark",
+      "violations": []
+    },
+    {
+      "page": "login",
+      "theme": "light",
+      "violations": []
+    },
+    {
+      "page": "login",
+      "theme": "dark",
+      "violations": []
+    },
+    {
+      "page": "overview",
+      "theme": "light",
+      "violations": []
+    },
+    {
+      "page": "overview",
+      "theme": "dark",
+      "violations": []
+    },
+    {
+      "page": "review queue",
+      "theme": "light",
+      "violations": []
+    },
+    {
+      "page": "review queue",
+      "theme": "dark",
+      "violations": []
+    },
+    {
+      "page": "query drawer",
+      "theme": "light",
+      "violations": []
+    },
+    {
+      "page": "query drawer",
+      "theme": "dark",
+      "violations": []
+    },
+    {
+      "page": "query explorer",
+      "theme": "light",
+      "violations": []
+    },
+    {
+      "page": "query explorer",
+      "theme": "dark",
+      "violations": []
+    },
+    {
+      "page": "evaluation",
+      "theme": "light",
+      "violations": []
+    },
+    {
+      "page": "evaluation",
+      "theme": "dark",
+      "violations": []
+    },
+    {
+      "page": "index",
+      "theme": "light",
+      "violations": []
+    },
+    {
+      "page": "index",
+      "theme": "dark",
+      "violations": []
+    },
+    {
+      "page": "settings",
+      "theme": "light",
+      "violations": []
+    },
+    {
+      "page": "settings",
+      "theme": "dark",
+      "violations": []
+    },
+    {
+      "page": "audit log",
+      "theme": "light",
+      "violations": []
+    },
+    {
+      "page": "audit log",
+      "theme": "dark",
+      "violations": []
+    },
+    {
+      "page": "403",
+      "theme": "light",
+      "violations": []
+    },
+    {
+      "page": "403",
+      "theme": "dark",
+      "violations": []
+    }
+  ],
+  "consoleErrors": []
+}

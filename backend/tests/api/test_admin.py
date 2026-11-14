@@ -161,6 +161,11 @@ def test_stats_window(api: AuthedClient) -> None:
     assert stats["latency_p50_ms"] <= stats["latency_p95_ms"]
     assert 0 <= stats["mean_confidence"] <= 1
     assert sum(p["total"] for p in stats["series"]) == 4
+    bins = stats["confidence_histogram"]
+    assert len(bins) == 10
+    assert sum(b["count"] for b in bins) == 4
+    assert bins[0]["lower"] == 0.0
+    assert bins[-1]["upper"] == 1.0
     assert {t["topic"] for t in stats["top_topics"]} <= {"ppe", "hand-hygiene"}
 
     future = datetime.now(UTC) + timedelta(days=1)

@@ -35,6 +35,12 @@ class TopicCount(BaseModel):
     count: int
 
 
+class ConfidenceBin(BaseModel):
+    lower: float
+    upper: float
+    count: int
+
+
 class StatsOut(BaseModel):
     since: datetime
     until: datetime
@@ -49,6 +55,9 @@ class StatsOut(BaseModel):
     reasons: dict[str, int] = Field(description="Abstention reasons and counts.")
     top_topics: list[TopicCount]
     series: list[DailyPointOut] = Field(description="One point per UTC day with queries.")
+    confidence_histogram: list[ConfidenceBin] = Field(
+        description="Answers per confidence band [lower, upper); the last band includes 1.0."
+    )
 
 
 # --- queries and reviews -----------------------------------------------------------
@@ -81,6 +90,9 @@ class QuerySummary(BaseModel):
     index_version: str
     topics: list[str]
     reviewed: bool = False
+    escalated_at: datetime | None = Field(
+        default=None, description="When a user asked for human review (Phase 6)."
+    )
 
 
 class QueryDetail(QuerySummary):
@@ -90,6 +102,7 @@ class QueryDetail(QuerySummary):
     candidate_answer: str | None = Field(
         description="Withheld low-confidence answer; visible to reviewers only (ADR-0007)."
     )
+    escalation_note: str | None = Field(description="The user's reason (redacted).")
     review: ReviewOut | None
 
 

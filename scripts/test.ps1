@@ -15,7 +15,7 @@ Usage: scripts/test.ps1 [--backend] [--frontend] [--e2e] [--all] [--coverage] [-
   --frontend   Frontend tests (vitest)
   --e2e        Playwright E2E (Phase 7+; currently reports "not available")
   --all        Backend + frontend (default when no layer is chosen)
-  --coverage   Backend coverage report (terminal + backend/coverage.xml)
+  --coverage   Coverage reports (backend/coverage.xml, frontend/coverage/)
   --ci         Plain output (no colours)
 '@ | Write-Host
 }
@@ -44,7 +44,11 @@ if ($doBackend) {
 if ($doFrontend) {
     Assert-Command npm 'Run scripts/setup.ps1 first.'
     Write-Step 'Frontend tests'
-    Invoke-Step 'vitest' npm @('--prefix', $frontend, 'run', '-s', 'test')
+    if ($coverage) {
+        Invoke-Step 'vitest (coverage)' npm @('--prefix', $frontend, 'run', '-s', 'test:coverage')
+    } else {
+        Invoke-Step 'vitest' npm @('--prefix', $frontend, 'run', '-s', 'test')
+    }
 }
 
 if ($doE2e) {

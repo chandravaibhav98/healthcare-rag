@@ -74,7 +74,7 @@ class QueryLog(Base):
     )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=_uuid)
-    request_id: Mapped[str] = mapped_column(String(64))
+    request_id: Mapped[str] = mapped_column(String(64), index=True)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow, index=True)
     user_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
@@ -92,6 +92,9 @@ class QueryLog(Base):
     top_k: Mapped[int] = mapped_column(Integer)
     latency_ms: Mapped[float] = mapped_column(Float)
     index_version: Mapped[str] = mapped_column(String(32), index=True)
+    # A user asked for a human to check this answer (Phase 6, "escalate for review").
+    escalated_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
+    escalation_note: Mapped[str | None] = mapped_column(Text, nullable=True)  # redacted
 
     review: Mapped[Review | None] = relationship(back_populates="query", uselist=False)
 

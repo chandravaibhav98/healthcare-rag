@@ -25,6 +25,15 @@ from app.repositories import query_log as query_repo
 from app.repositories import reviews as review_repo
 
 TOP_TOPICS = 10
+HISTOGRAM_BINS = 10
+
+
+def histogram(values: Sequence[float], bins: int = HISTOGRAM_BINS) -> list[int]:
+    """Counts per equal-width bin over [0, 1]; 1.0 falls in the last bin."""
+    counts = [0] * bins
+    for v in values:
+        counts[min(bins - 1, max(0, int(v * bins)))] += 1
+    return counts
 
 
 def percentile(values: Sequence[float], q: float) -> float | None:
@@ -60,6 +69,7 @@ class Stats:
     reasons: dict[str, int]
     top_topics: list[tuple[str, int]]
     series: list[DailyPoint]
+    confidence_histogram: list[int]
 
 
 async def stats(session: AsyncSession, since: datetime, until: datetime) -> Stats:
@@ -97,6 +107,7 @@ async def stats(session: AsyncSession, since: datetime, until: datetime) -> Stat
         reasons=dict(sorted(reasons.items())),
         top_topics=topics.most_common(TOP_TOPICS),
         series=series,
+        confidence_histogram=histogram(confidences),
     )
 
 

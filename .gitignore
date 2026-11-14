@@ -58,3 +58,6 @@ e2e/.auth/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Frontend test coverage (vitest --coverage)
+frontend/coverage/

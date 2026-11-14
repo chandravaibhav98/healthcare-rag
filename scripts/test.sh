@@ -16,7 +16,7 @@ Usage: scripts/test.sh [--backend] [--frontend] [--e2e] [--all] [--coverage] [--
   --frontend   Frontend tests (vitest)
   --e2e        Playwright E2E (Phase 7+; currently reports "not available")
   --all        Backend + frontend (default when no layer is chosen)
-  --coverage   Backend coverage report (terminal + backend/coverage.xml)
+  --coverage   Coverage reports (backend/coverage.xml, frontend/coverage/)
   --ci         Plain output (no colours)
 USAGE
 }
@@ -50,7 +50,11 @@ fi
 if ((DO_FRONTEND)); then
   require_cmd npm "Run scripts/setup.sh first."
   log_step "Frontend tests"
-  run_step "vitest" npm --prefix "$FRONTEND_DIR" run -s test
+  if ((COVERAGE)); then
+    run_step "vitest (coverage)" npm --prefix "$FRONTEND_DIR" run -s test:coverage
+  else
+    run_step "vitest" npm --prefix "$FRONTEND_DIR" run -s test
+  fi
 fi
 
 if ((DO_E2E)); then

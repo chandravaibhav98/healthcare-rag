@@ -23,10 +23,11 @@ supersedes it.
 | [0005](0005-faiss-index-flat-ip.md) | FAISS IndexFlatIP | **Accepted** (Phase 1) | SC1 |
 | [0006](0006-api-contract-and-error-format.md) | API contract v1.1, additive meta, RFC 9457 errors | Proposed (v1.1 implemented Phase 3) | SC4 |
 | [0007](0007-abstention-response-policy.md) | Abstention response policy | Proposed (implemented Phase 3) | SC3 |
-| [0008](0008-persistence-auth-index-distribution.md) | Persistence, auth, index distribution | Proposed (Phases 5, 8, 9) | — |
-| [0009](0009-healthcare-data-handling.md) | Healthcare data handling (PHI) | Proposed (Phases 0 and 3 parts implemented) | — |
+| [0008](0008-persistence-auth-index-distribution.md) | Persistence, auth, index distribution | **Accepted** for persistence and auth (Phase 5); index distribution Proposed (Phase 9) | — |
+| [0009](0009-healthcare-data-handling.md) | Healthcare data handling (PHI) | **Accepted** (Phases 0, 3, 5) | — |
 | [0010](0010-superseded-guidance-not-answer-text.md) | Superseded guidance is never used as answer text | **Accepted** (Phase 2) | SC3, safety |
 | [0011](0011-bm25-ranking-default.md) | BM25 ranks by default; dense vectors score relevance | **Accepted** (Phase 4) | SC2, SC3 |
+| [0012](0012-frontend-architecture-and-accessibility.md) | Frontend architecture, generated API client, accessibility gate | **Accepted** (Phase 6) | SC4, R8 |
 
 **Phase 0 exit** requires ADR-0001 and ADR-0002 to be *Accepted*: fill in their Approval tables, then change their status.
 

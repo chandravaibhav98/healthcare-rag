@@ -53,6 +53,7 @@ if ($doFrontend) {
         Invoke-Step 'prettier --check' npm @('--prefix', $frontend, 'run', '-s', 'format:check')
     }
     Invoke-Step 'tsc --noEmit' npm @('--prefix', $frontend, 'run', '-s', 'typecheck')
+    Invoke-Step 'API types current' npm @('--prefix', $frontend, 'run', '-s', 'gen:api:check')
 }
 
 Complete-Steps 'Lint'

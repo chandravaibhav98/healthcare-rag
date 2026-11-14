@@ -31,3 +31,6 @@ def test_api_eval_run_matches_the_baseline(
     for metric in ("p@5", "pass_rate", "false_validation_rate", "mrr"):
         assert done["scorecard"][metric] == pytest.approx(baseline[metric], abs=1e-4), metric
     assert done["summary"]["split"] == "dev"
+    low = done["summary"]["low_confidence"]
+    assert low, "the analyst list is part of every API run"
+    assert {"id", "why", "confidence", "question"} <= set(low[0])

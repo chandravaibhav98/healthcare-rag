@@ -1,0 +1,98 @@
+@import 'tailwindcss';
+
+/* Dark mode follows a `.dark` class on <html> (set from the theme toggle, defaulting to
+   the OS preference) rather than the media query, so users can override it. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Design tokens (shadcn/ui-style). Every foreground/background pair below meets
+   WCAG 2.2 AA contrast (≥ 4.5:1 for text) in both themes. */
+:root {
+  --background: #ffffff;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --muted: #f1f5f9;
+  --muted-foreground: #475569;
+  --border: #cbd5e1;
+  --primary: #1d4ed8;
+  --primary-foreground: #ffffff;
+  --ring: #2563eb;
+  --success: #166534;
+  --success-bg: #dcfce7;
+  --warning: #92400e;
+  --warning-bg: #fef3c7;
+  --danger: #b91c1c;
+  --danger-bg: #fee2e2;
+  --highlight: #fde68a;
+  color-scheme: light;
+}
+
+.dark {
+  --background: #0b1220;
+  --foreground: #e2e8f0;
+  --card: #111a2e;
+  --muted: #1e293b;
+  --muted-foreground: #cbd5e1;
+  --border: #334155;
+  --primary: #93c5fd;
+  --primary-foreground: #0b1220;
+  --ring: #93c5fd;
+  --success: #86efac;
+  --success-bg: #052e16;
+  --warning: #fcd34d;
+  --warning-bg: #422006;
+  --danger: #fca5a5;
+  --danger-bg: #450a0a;
+  --highlight: #854d0e;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-ring: var(--ring);
+  --color-success: var(--success);
+  --color-success-bg: var(--success-bg);
+  --color-warning: var(--warning);
+  --color-warning-bg: var(--warning-bg);
+  --color-danger: var(--danger);
+  --color-danger-bg: var(--danger-bg);
+  --color-highlight: var(--highlight);
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family:
+      ui-sans-serif,
+      system-ui,
+      -apple-system,
+      'Segoe UI',
+      Roboto,
+      'Helvetica Neue',
+      Arial,
+      sans-serif;
+  }
+  /* Visible focus for keyboard users everywhere (WCAG 2.4.7 / 2.4.13). */
+  :focus-visible {
+    outline: 3px solid var(--ring);
+    outline-offset: 2px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}

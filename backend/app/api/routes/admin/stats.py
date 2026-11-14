@@ -9,7 +9,7 @@ from fastapi import APIRouter, HTTPException, Query, status
 
 from app.api.deps import ReviewerDep, SessionDep
 from app.api.routes.admin._common import PREFIX, responses
-from app.api.schemas.admin import DailyPointOut, StatsOut, TopicCount
+from app.api.schemas.admin import ConfidenceBin, DailyPointOut, StatsOut, TopicCount
 from app.db.base import utcnow
 from app.services import admin_service
 
@@ -63,4 +63,9 @@ async def get_stats(
         reasons=s.reasons,
         top_topics=[TopicCount(topic=t, count=c) for t, c in s.top_topics],
         series=[DailyPointOut.model_validate(p) for p in s.series],
+        confidence_histogram=[
+            ConfidenceBin(lower=i / n, upper=(i + 1) / n, count=c)
+            for n in [len(s.confidence_histogram)]
+            for i, c in enumerate(s.confidence_histogram)
+        ],
     )

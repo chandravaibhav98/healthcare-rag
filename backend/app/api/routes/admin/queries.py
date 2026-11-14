@@ -46,6 +46,7 @@ def detail(row: QueryLog) -> QueryDetail:
             "citations": row.citations,
             "answer": row.answer,
             "candidate_answer": row.candidate_answer,
+            "escalation_note": row.escalation_note,
             "review": ReviewOut.model_validate(row.review) if row.review else None,
         }
     )
@@ -71,6 +72,7 @@ async def list_queries(
     index_version: str | None = None,
     q: Annotated[str | None, Query(max_length=200, description="Text in the question.")] = None,
     reviewed: bool | None = None,
+    escalated: bool | None = None,
 ) -> Page[QuerySummary]:
     f = query_repo.QueryFilter(
         status=status_,
@@ -82,6 +84,7 @@ async def list_queries(
         index_version=index_version,
         text=q,
         reviewed=reviewed,
+        escalated=escalated,
     )
     return to_page(await query_repo.page(session, f, page), summary)
 
@@ -105,8 +108,9 @@ async def get_query(_: ReviewerDep, session: SessionDep, query_id: uuid.UUID) ->
     response_model=Page[ReviewQueueItem],
     operation_id="admin_list_reviews",
     summary="Review queue (pending) and review history (reviewed)",
-    description="`pending`: abstained queries nobody has reviewed yet. `reviewed`: queries "
-    "with a review (filter by `verdict`). `all`: every abstained or reviewed query.",
+    description="`pending`: abstained or user-escalated queries nobody has reviewed yet. "
+    "`reviewed`: queries with a review (filter by `verdict`). `all`: every abstained, "
+    "escalated or reviewed query.",
     responses=responses(422),
 )
 async def list_reviews(
@@ -118,7 +122,7 @@ async def list_reviews(
     promoted: bool | None = None,
 ) -> Page[ReviewQueueItem]:
     if status_ == "pending":
-        f = query_repo.QueryFilter(status="needs_review", reviewed=False)
+        f = query_repo.QueryFilter(awaiting_review=True)
     elif status_ == "reviewed":
         f = query_repo.QueryFilter(reviewed=True, verdict=verdict, promoted=promoted)
     else:

@@ -23,7 +23,7 @@ export default tseslint.config(
   reactRefresh.configs.vite,
   {
     // Plain-JS config files are not part of the TS project.
-    files: ['**/*.js'],
+    files: ['**/*.js', '**/*.mjs'],
     extends: [tseslint.configs.disableTypeChecked],
     languageOptions: { globals: globals.node },
   },

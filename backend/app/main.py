@@ -28,6 +28,7 @@ from app import __version__
 from app.api.errors import PROBLEM_JSON, register_exception_handlers
 from app.api.routes.admin import router as admin_router
 from app.api.routes.auth import router as auth_router
+from app.api.routes.escalations import router as escalation_router
 from app.api.routes.health import router as health_router
 from app.api.routes.qa import router as qa_router
 from app.api.schemas.qa import CONTRACT_VERSION
@@ -231,6 +232,7 @@ def create_app(
 
     register_exception_handlers(app)
     app.include_router(qa_router)
+    app.include_router(escalation_router)
     app.include_router(auth_router)
     app.include_router(admin_router)
     app.include_router(health_router)

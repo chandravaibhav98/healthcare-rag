@@ -46,12 +46,15 @@ EvalRunner = Callable[[LoadedIndex, Settings], dict[str, Any]]
 def default_runner(index: LoadedIndex, settings: Settings) -> dict[str, Any]:
     """Same computation as the CLI; imported lazily so the API starts without it."""
     from evaluation.common import check_index
+    from evaluation.eval_validation import review_list
     from evaluation.run import evaluate_split
     from evaluation.schemas import Split
 
     warning = check_index(index)
     result = evaluate_split(index, Split.DEV, settings)
     summary = result.summary(settings, index.index_version, Split.DEV)
+    # The analyst list (low_confidence.csv in CLI runs), for the dashboard.
+    summary["low_confidence"] = review_list(result.validation_rows, settings.confidence_threshold)
     if warning:
         summary["warning"] = warning
     return summary
