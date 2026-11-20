@@ -1,0 +1,38 @@
+# North-south traffic through the Gateway API (the community ingress-nginx controller was
+# retired in March 2026; ADR-0015). The class is set per overlay (Envoy Gateway's `eg`
+# locally); the routes are portable across implementations.
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: hcrag
+spec:
+  gatewayClassName: eg
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces: { from: Same }
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: hcrag
+spec:
+  parentRefs:
+    - name: hcrag
+      sectionName: http
+  rules:
+    # The API: /api/* and the spec's /qa alias go straight to the API Service.
+    - matches:
+        - path: { type: PathPrefix, value: /api }
+        - path: { type: Exact, value: /qa }
+      backendRefs:
+        - { name: api, port: 8000 }
+      timeouts:
+        request: 60s
+    # Everything else is the SPA (nginx adds the security headers and caching).
+    - matches:
+        - path: { type: PathPrefix, value: / }
+      backendRefs:
+        - { name: web, port: 8080 }

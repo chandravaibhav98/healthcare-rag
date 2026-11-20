@@ -1,0 +1,14 @@
+# Port 80 only redirects to HTTPS. (Attached to the base Gateway's `http` listener.)
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: hcrag-https-redirect
+spec:
+  parentRefs:
+    - name: hcrag
+      sectionName: http
+  hostnames: ["rag.example.org"]
+  rules:
+    - filters:
+        - type: RequestRedirect
+          requestRedirect: { scheme: https, statusCode: 301 }

@@ -1,0 +1,120 @@
+# rag-api: two stateless replicas behind the `api` Service.
+#
+# The index ships as its own image (rag-index:<index_version>, ADR-0008). An init
+# container copies it into an emptyDir before the API starts, so:
+#   * the app image and the index roll out (and roll back) independently;
+#   * `kubectl rollout undo deployment/api` restores the previous index too, because the
+#     index image tag is part of the pod template;
+#   * the API verifies every artifact hash at start-up and refuses a corrupt copy.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  labels: { app.kubernetes.io/component: api }
+spec:
+  # No `replicas`: the HorizontalPodAutoscaler owns the count (2-6, autoscaling.yaml).
+  # A fixed value here would reset the HPA's choice on every `kubectl apply`.
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels: { app.kubernetes.io/component: api }
+  strategy:
+    type: RollingUpdate
+    # Never fewer ready pods than desired during a rollout: zero-downtime updates.
+    rollingUpdate: { maxUnavailable: 0, maxSurge: 1 }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/component: api }
+    spec:
+      serviceAccountName: api
+      automountServiceAccountToken: false
+      # No {SERVICE}_PORT=tcp://... variables: the `api` Service would otherwise inject
+      # API_PORT, which collides with the app's own API_PORT setting.
+      enableServiceLinks: false
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile: { type: RuntimeDefault }
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels: { app.kubernetes.io/component: api }
+      initContainers:
+        - name: index
+          image: rag-index
+          # The image's default command copies /index into /target and checks the manifest.
+          securityContext:
+            runAsUser: 65534
+            runAsGroup: 65534
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          resources:
+            requests: { cpu: 10m, memory: 16Mi }
+            limits: { cpu: 200m, memory: 64Mi }
+          volumeMounts:
+            - { name: index, mountPath: /target }
+      containers:
+        - name: api
+          image: rag-api
+          ports:
+            - { name: http, containerPort: 8000, protocol: TCP }
+          envFrom:
+            - configMapRef: { name: api-config }
+          env:
+            - name: DATABASE_URL
+              valueFrom: { secretKeyRef: { name: hcrag-secrets, key: DATABASE_URL } }
+            - name: JWT_SECRET
+              valueFrom: { secretKeyRef: { name: hcrag-secrets, key: JWT_SECRET } }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          resources:
+            # Retrieval is CPU-bound (~10-20 ms per answer); the index is ~1 MB in memory.
+            requests: { cpu: 250m, memory: 256Mi }
+            limits: { cpu: "1", memory: 512Mi }
+          # Start-up loads and hash-verifies the index and checks the DB schema revision.
+          startupProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 2
+            failureThreshold: 30
+          # Ready = index loaded AND database reachable (/readyz); a pod that loses the DB
+          # stops receiving traffic but is not restarted.
+          readinessProbe:
+            httpGet: { path: /readyz, port: http }
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 2
+          livenessProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+          lifecycle:
+            # Keep serving while the endpoint removal propagates to the gateway and kube-proxy,
+            # so in-flight and just-routed requests are not dropped on scale-down/rollout.
+            preStop:
+              exec: { command: ["sleep", "5"] }
+          volumeMounts:
+            - { name: index, mountPath: /var/lib/rag/index, readOnly: true }
+            - { name: tmp, mountPath: /tmp }
+      volumes:
+        - name: index
+          emptyDir: { sizeLimit: 64Mi }
+        - name: tmp
+          emptyDir: { medium: Memory, sizeLimit: 16Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api
+  labels: { app.kubernetes.io/component: api }
+spec:
+  selector: { app.kubernetes.io/component: api }
+  ports:
+    - { name: http, port: 8000, targetPort: http, protocol: TCP }

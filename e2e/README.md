@@ -15,6 +15,9 @@ Browser and load tests. One npm package (`package.json`), installed by `scripts/
 scripts/test.sh --e2e                    # or: npm --prefix e2e test
 CHROME_PATH=/path/to/chrome scripts/test.sh --e2e   # use an installed Chrome
 E2E_BASE_URL=http://localhost:5173 npm --prefix e2e test   # against a running stack
+# Compose (scripts/docker-up.sh --demo) and kind (scripts/k8s-up.sh): pass their seeded password
+E2E_BASE_URL=http://localhost:8080 E2E_PASSWORD=<SEED_ADMIN_PASSWORD from deploy/compose/.env> npm --prefix e2e test
+E2E_BASE_URL=http://localhost:8088 E2E_PASSWORD=<SEED_ADMIN_PASSWORD from deploy/k8s/overlays/local/secrets.env> npm --prefix e2e test
 ```
 
 Without `E2E_BASE_URL`, Playwright starts its own stack: a disposable, seeded API on

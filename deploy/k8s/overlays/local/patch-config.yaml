@@ -1,0 +1,11 @@
+# Local cluster: staging (demo accounts are refused in production) and limits that let
+# the E2E suite and the load test run from one host. Everything else stays production.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-config
+data:
+  APP_ENV: staging
+  RATE_LIMIT_QA: 6000/minute
+  LOGIN_RATE_LIMIT: 600/minute
+  SEED_ADMIN_EMAIL: admin@example.org

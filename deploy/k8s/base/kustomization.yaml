@@ -1,0 +1,24 @@
+# Base for every environment (plan §4 Phase 9). Overlays add the Secret, the database
+# (local) or its ExternalSecret (prod), the gateway's infrastructure and image tags.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: healthcare-rag
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: healthcare-rag
+      app.kubernetes.io/managed-by: kustomize
+    includeSelectors: false
+resources:
+  - namespace.yaml
+  - serviceaccounts.yaml
+  - configmap.yaml
+  - api.yaml
+  - web.yaml
+  - migrate-job.yaml
+  - autoscaling.yaml
+  - networkpolicies.yaml
+  - gateway.yaml
+images:
+  - { name: rag-api, newName: rag-api, newTag: local }
+  - { name: rag-web, newName: rag-web, newTag: local }
+  - { name: rag-index, newName: rag-index, newTag: local }

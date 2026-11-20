@@ -54,6 +54,8 @@ identical flags). CI calls the same scripts, so "green locally" means "green in 
 | Evaluation scorecard and regression gate | `scripts/eval.sh` · `pwsh scripts/eval.ps1` |
 | Database migrations (never at API start-up) | `scripts/db-migrate.sh` · `pwsh scripts/db-migrate.ps1` |
 | Admin account and demo data | `scripts/seed.sh --demo` · `pwsh scripts/seed.ps1 --demo` |
+| Compose stack (`--demo`, `--observability`) and its lifecycle | `scripts/docker-up.sh` · `docker-down` · `docker-rebuild` · `docker-logs` (and `.ps1`) |
+| Local Kubernetes (kind) and its checks | `scripts/k8s-up.sh` · `k8s-verify` · `k8s-status` · `k8s-port-forward` · `k8s-down` (and `.ps1`) |
 
 A new script must ship as a `.sh` + `.ps1` pair, support `--help`, be idempotent, and
 return non-zero on failure. Shared helpers live in `scripts/lib/`.

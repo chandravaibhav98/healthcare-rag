@@ -1,0 +1,51 @@
+# Ingress is denied by default; each allowed path is listed below:
+#
+#   gateway ──► web :8080          (namespaces labelled healthcare-rag/gateway=true)
+#   gateway ──► api :8000          (the HTTPRoute sends /api straight to the API)
+#   web ─────► api :8000           (nginx proxies /api when the web Service is used directly)
+#   api, migrate, seed ─► postgres  (in the local overlay; prod uses a managed database)
+#
+# Label the namespace of your Gateway's data plane, e.g.
+#   kubectl label namespace envoy-gateway-system healthcare-rag/gateway=true
+# (scripts/k8s-up.* does this for the local kind cluster).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+spec:
+  podSelector: {}
+  policyTypes: [Ingress]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: web-from-gateway
+  labels: { app.kubernetes.io/component: web }
+spec:
+  podSelector:
+    matchLabels: { app.kubernetes.io/component: web }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels: { healthcare-rag/gateway: "true" }
+      ports:
+        - { protocol: TCP, port: 8080 }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: api-from-gateway-and-web
+  labels: { app.kubernetes.io/component: api }
+spec:
+  podSelector:
+    matchLabels: { app.kubernetes.io/component: api }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels: { healthcare-rag/gateway: "true" }
+        - podSelector:
+            matchLabels: { app.kubernetes.io/component: web }
+      ports:
+        - { protocol: TCP, port: 8000 }

@@ -1,0 +1,67 @@
+# Local-only: the admin account plus demo reviewer/user accounts and a week of history,
+# so the dashboard and the E2E suite have data. Retries until db-migrate has run.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: db-seed
+  labels: { app.kubernetes.io/component: seed }
+spec:
+  backoffLimit: 8
+  activeDeadlineSeconds: 900
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels: { app.kubernetes.io/component: seed }
+    spec:
+      restartPolicy: Never
+      serviceAccountName: api
+      automountServiceAccountToken: false
+      # No {SERVICE}_PORT=tcp://... variables: the `api` Service would otherwise inject
+      # API_PORT, which collides with the app's own API_PORT setting.
+      enableServiceLinks: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile: { type: RuntimeDefault }
+      initContainers:
+        # Demo history is stamped with the active index_version.
+        - name: index
+          image: rag-index
+          securityContext:
+            runAsUser: 65534
+            runAsGroup: 65534
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          volumeMounts:
+            - { name: index, mountPath: /target }
+      containers:
+        - name: seed
+          image: rag-api
+          command: ["python", "scripts/seed.py", "--demo"]
+          envFrom:
+            - configMapRef: { name: api-config }
+          env:
+            - name: DATABASE_URL
+              valueFrom: { secretKeyRef: { name: hcrag-secrets, key: DATABASE_URL } }
+            - name: JWT_SECRET
+              valueFrom: { secretKeyRef: { name: hcrag-secrets, key: JWT_SECRET } }
+            - name: SEED_ADMIN_PASSWORD
+              valueFrom: { secretKeyRef: { name: hcrag-secrets, key: SEED_ADMIN_PASSWORD } }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { cpu: "1", memory: 384Mi }
+          volumeMounts:
+            - { name: index, mountPath: /var/lib/rag/index, readOnly: true }
+            - { name: tmp, mountPath: /tmp }
+      volumes:
+        - name: index
+          emptyDir: { sizeLimit: 64Mi }
+        - name: tmp
+          emptyDir: { medium: Memory, sizeLimit: 16Mi }

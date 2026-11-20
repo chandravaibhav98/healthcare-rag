@@ -1,0 +1,16 @@
+# kind cluster for the local overlay (scripts/k8s-up.*): one control plane and two
+# workers, so topology spreading, the PodDisruptionBudgets and rolling updates behave
+# as on a real multi-node cluster. The gateway's NodePort 30080 is published on
+# http://localhost:8088 (loopback only). kind's default CNI enforces NetworkPolicies.
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: healthcare-rag
+nodes:
+  - role: control-plane
+    extraPortMappings:
+      - containerPort: 30080
+        hostPort: 8088
+        listenAddress: "127.0.0.1"
+        protocol: TCP
+  - role: worker
+  - role: worker

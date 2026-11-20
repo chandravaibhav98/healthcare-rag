@@ -1,0 +1,95 @@
+# Local-only PostgreSQL (the prod overlay uses a managed database). One replica, a
+# 1 GiB PersistentVolumeClaim from the cluster's default StorageClass.
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  labels: { app.kubernetes.io/component: postgres }
+spec:
+  serviceName: postgres
+  replicas: 1
+  selector:
+    matchLabels: { app.kubernetes.io/component: postgres }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/component: postgres }
+    spec:
+      automountServiceAccountToken: false
+      # No {SERVICE}_PORT=tcp://... variables: the `api` Service would otherwise inject
+      # API_PORT, which collides with the app's own API_PORT setting.
+      enableServiceLinks: false
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        # UID/GID 70 = the `postgres` user of the official Alpine image.
+        runAsNonRoot: true
+        runAsUser: 70
+        runAsGroup: 70
+        fsGroup: 70
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: postgres
+          image: postgres:18-alpine
+          ports:
+            - { name: postgres, containerPort: 5432, protocol: TCP }
+          env:
+            - { name: POSTGRES_USER, value: rag }
+            - { name: POSTGRES_DB, value: rag }
+            - name: POSTGRES_PASSWORD
+              valueFrom: { secretKeyRef: { name: hcrag-secrets, key: POSTGRES_PASSWORD } }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          resources:
+            requests: { cpu: 100m, memory: 128Mi }
+            limits: { cpu: "1", memory: 512Mi }
+          readinessProbe:
+            exec: { command: ["pg_isready", "-U", "rag", "-d", "rag"] }
+            periodSeconds: 5
+          livenessProbe:
+            exec: { command: ["pg_isready", "-U", "rag", "-d", "rag"] }
+            periodSeconds: 15
+            failureThreshold: 4
+          volumeMounts:
+            - { name: data, mountPath: /var/lib/postgresql }
+            - { name: run, mountPath: /var/run/postgresql }
+            - { name: tmp, mountPath: /tmp }
+      volumes:
+        - name: run
+          emptyDir: { medium: Memory, sizeLimit: 8Mi }
+        - name: tmp
+          emptyDir: { sizeLimit: 256Mi }
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: [ReadWriteOnce]
+        resources:
+          requests: { storage: 1Gi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  labels: { app.kubernetes.io/component: postgres }
+spec:
+  selector: { app.kubernetes.io/component: postgres }
+  ports:
+    - { name: postgres, port: 5432, targetPort: postgres, protocol: TCP }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: postgres-from-app
+  labels: { app.kubernetes.io/component: postgres }
+spec:
+  podSelector:
+    matchLabels: { app.kubernetes.io/component: postgres }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchExpressions:
+              - { key: app.kubernetes.io/component, operator: In, values: [api, migrate, seed] }
+      ports:
+        - { protocol: TCP, port: 5432 }

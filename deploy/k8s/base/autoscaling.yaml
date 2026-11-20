@@ -1,0 +1,40 @@
+# Scale the API on CPU (retrieval is CPU-bound). Needs metrics-server (k8s-up installs it
+# on kind). Scale-down waits 5 minutes so a bursty load does not flap the replica count.
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: api
+  labels: { app.kubernetes.io/component: api }
+spec:
+  scaleTargetRef: { apiVersion: apps/v1, kind: Deployment, name: api }
+  minReplicas: 2
+  maxReplicas: 6
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target: { type: Utilization, averageUtilization: 70 }
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+---
+# Voluntary disruptions (node drains, cluster upgrades) keep at least one pod of each.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: api
+  labels: { app.kubernetes.io/component: api }
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: { app.kubernetes.io/component: api }
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: web
+  labels: { app.kubernetes.io/component: web }
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: { app.kubernetes.io/component: web }

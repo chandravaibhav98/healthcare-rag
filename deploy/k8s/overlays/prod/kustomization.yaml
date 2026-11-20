@@ -1,0 +1,83 @@
+# Production overlay (plan §4 Phase 9): managed PostgreSQL, secrets from the External
+# Secrets Operator, TLS on the Gateway (certificate by cert-manager), more replicas and
+# resources, Prometheus Operator scraping. Applied by the release pipeline (Phase 10),
+# never by hand from a laptop:
+#
+#   kustomize edit set image rag-api=ghcr.io/<owner>/rag-api:<git-sha> ...   (CI)
+#   kubectl apply -k deploy/k8s/overlays/prod
+#
+# Replace rag.example.org and the image names before first use.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: healthcare-rag
+resources:
+  - ../../base
+  - external-secret.yaml
+  - gateway-tls.yaml
+components:
+  - ../../components/service-monitor
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: healthcare-rag
+      app.kubernetes.io/managed-by: kustomize
+    includeSelectors: false
+patches:
+  - path: patch-config.yaml
+  # Scale. JSON patches (not a partial Deployment file), so a scanner never reads a
+  # fragment as a full, insecure Deployment.
+  - target: { kind: Deployment, name: api }
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources
+        value:
+          requests: { cpu: 500m, memory: 384Mi }
+          limits: { cpu: "2", memory: 768Mi }
+  - target: { kind: Deployment, name: web }
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 3
+  - target: { kind: HorizontalPodAutoscaler, name: api }
+    patch: |-
+      - op: replace
+        path: /spec/minReplicas
+        value: 3
+      - op: replace
+        path: /spec/maxReplicas
+        value: 10
+  # HTTPS listener with a cert-manager certificate; the app route moves to it.
+  - target: { kind: Gateway, name: hcrag }
+    patch: |-
+      - op: add
+        path: /metadata/annotations
+        value: { cert-manager.io/cluster-issuer: letsencrypt-prod }
+      - op: replace
+        path: /spec/listeners
+        value:
+          - name: http
+            protocol: HTTP
+            port: 80
+            hostname: rag.example.org
+            allowedRoutes: { namespaces: { from: Same } }
+          - name: https
+            protocol: HTTPS
+            port: 443
+            hostname: rag.example.org
+            tls:
+              mode: Terminate
+              certificateRefs:
+                - { kind: Secret, name: hcrag-tls }
+            allowedRoutes: { namespaces: { from: Same } }
+  - target: { kind: HTTPRoute, name: hcrag }
+    patch: |-
+      - op: replace
+        path: /spec/parentRefs/0/sectionName
+        value: https
+      - op: add
+        path: /spec/hostnames
+        value: ["rag.example.org"]
+images:
+  # Set by the release pipeline (Phase 10) to the pushed, immutable tags.
+  - { name: rag-api, newName: ghcr.io/OWNER/rag-api, newTag: CHANGE-ME }
+  - { name: rag-web, newName: ghcr.io/OWNER/rag-web, newTag: CHANGE-ME }
+  - { name: rag-index, newName: ghcr.io/OWNER/rag-index, newTag: CHANGE-ME }

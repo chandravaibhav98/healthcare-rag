@@ -1,0 +1,55 @@
+# Database migrations run as a Job BEFORE the API rolls out (the API refuses to start on
+# an out-of-date schema: SchemaNotAtHeadError). Jobs are immutable, so scripts/k8s-up.*
+# deletes the finished Job before re-applying; with Argo CD the hook annotations below do
+# the same (run before each sync, delete the previous run).
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: db-migrate
+  labels: { app.kubernetes.io/component: migrate }
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  # Retries cover the database still starting (local overlay) or a brief network blip.
+  backoffLimit: 6
+  activeDeadlineSeconds: 600
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels: { app.kubernetes.io/component: migrate }
+    spec:
+      restartPolicy: Never
+      serviceAccountName: api
+      automountServiceAccountToken: false
+      # No {SERVICE}_PORT=tcp://... variables: the `api` Service would otherwise inject
+      # API_PORT, which collides with the app's own API_PORT setting.
+      enableServiceLinks: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: migrate
+          image: rag-api
+          command: ["python", "scripts/db.py", "upgrade"]
+          envFrom:
+            - configMapRef: { name: api-config }
+          env:
+            - name: DATABASE_URL
+              valueFrom: { secretKeyRef: { name: hcrag-secrets, key: DATABASE_URL } }
+            - name: JWT_SECRET
+              valueFrom: { secretKeyRef: { name: hcrag-secrets, key: JWT_SECRET } }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { cpu: 500m, memory: 256Mi }
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
+      volumes:
+        - name: tmp
+          emptyDir: { medium: Memory, sizeLimit: 16Mi }

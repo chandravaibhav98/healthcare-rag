@@ -21,8 +21,10 @@ replaced by an organisation's secure guideline repository.
 | Phase 4: evaluation and threshold tuning | ✅ Harness + CI gate. Held-out: SC3 met (0.807); SC2 P@5 0.417 vs ceiling 0.583 (decision pending); 2/12 false validations ([report](docs/project/phase-4-report.md), [evaluation](docs/evaluation-report.md)) |
 | Phase 5: persistence, auth and admin APIs | ✅ SQLite/PostgreSQL, JWT + RBAC, 17 admin routes, audited runtime tuning, PHI redaction + retention ([report](docs/project/phase-5-report.md)) |
 | Phase 6: React assistant and admin dashboard | ✅ Assistant with evidence view and escalation, 7-section dashboard; Lighthouse a11y 100 on every route, axe clean in light and dark ([report](docs/project/phase-6-report.md)) |
-| **Phase 7: test hardening and quality gates** | ✅ Coverage gates (backend 93 %, frontend 92 % lines), Schemathesis on every operation, 20 Playwright journeys + axe gate, k6 50 VUs × 5 min p95 179 ms / 0 % 5xx, security scans ([report](docs/project/phase-7-report.md)) |
-| Phase 8: containerization | ⏭️ Next |
+| Phase 7: test hardening and quality gates | ✅ Coverage gates (backend 93 %, frontend 92 % lines), Schemathesis on every operation, 20 Playwright journeys + axe gate, k6 50 VUs × 5 min p95 179 ms / 0 % 5xx, security scans ([report](docs/project/phase-7-report.md)) |
+| Phase 8: containerization | ✅ Three hardened images (API, web, index), Compose stack with internal network and observability profile; E2E 20/20 and k6 through nginx ([report](docs/project/phase-8-report.md)) |
+| **Phase 9: Kubernetes** | ✅ Kustomize base + local/prod overlays, Gateway API, restricted Pod Security, NetworkPolicies, HPA/PDB; E2E 20/20 through the gateway; zero failed requests during rolling restart and index rollback ([report](docs/project/phase-9-report.md)) |
+| Phase 10: CI/CD pipeline | ⏭️ Next |
 
 ## Quick start
 
@@ -38,6 +40,13 @@ PowerShell twins exist for every script (`pwsh ./scripts/setup.ps1`). See
 
 `setup` checks the toolchain, creates `.env`, installs the locked dependencies, installs
 the pre-commit hooks, and finishes by running every lint check and test.
+
+Run the whole stack in containers instead (Docker only; details in [deploy/README.md](deploy/README.md)):
+
+```bash
+scripts/docker-up.sh --demo      # Compose: http://localhost:8080
+scripts/k8s-up.sh                # kind + Envoy Gateway: http://localhost:8088 (needs kind, kubectl)
+```
 
 ## Architecture (target)
 
@@ -66,10 +75,10 @@ The default `DATABASE_URL` is a local SQLite file (`artifacts/app.db`). Demo acc
 `SEED_ADMIN_PASSWORD` (dev default `change-me-admin`). Leave `DATABASE_URL` empty to run
 `/qa` stateless.
 
-> **Upgrading from Phase 4?** An existing `.env` still points `DATABASE_URL` at
-> PostgreSQL on `localhost:5432`, which is not running yet (Phase 8). Copy the new
-> `DATABASE_URL`, `SEED_ADMIN_*` and Phase 5 keys from `.env.example`, or empty
-> `DATABASE_URL`.
+> **Upgrading from Phase 4?** An existing `.env` may still point `DATABASE_URL` at
+> PostgreSQL on `localhost:5432`. Copy the new `DATABASE_URL`, `SEED_ADMIN_*` and Phase 5
+> keys from `.env.example`, or empty `DATABASE_URL`. (The Compose and Kubernetes stacks
+> bring their own PostgreSQL.)
 
 ```bash
 curl -s -X POST http://127.0.0.1:8000/api/v1/qa \
@@ -119,7 +128,7 @@ Since 1.2 and 1.3 (all additive):
 | `frontend/` | React + TypeScript + Vite SPA |
 | `corpus/` | 72 synthetic guideline documents ([corpus card](corpus/CORPUS_CARD.md)) |
 | `e2e/` | Playwright E2E + accessibility gate, k6 load test, Phase 6 audit, demo (Phase 11) ([README](e2e/README.md)) |
-| `deploy/` | Docker, Compose, Kubernetes (Phases 8 and 9) |
+| `deploy/` | Dockerfiles, Compose, Kubernetes manifests ([README](deploy/README.md)) |
 | `scripts/` | Ops scripts, `.sh` + `.ps1` pairs ([CONTRIBUTING](CONTRIBUTING.md)) |
 | `docs/` | ADRs, project docs, spikes |
 
@@ -132,7 +141,7 @@ Since 1.2 and 1.3 (all additive):
 | `lint` | ruff, mypy, contract snapshots, eslint, prettier, tsc (`--fix`) |
 | `test` | pytest, vitest, Playwright (`--backend`, `--frontend`, `--e2e`, `--all`); `--coverage` enforces the coverage gates |
 | `load-test` | k6 against `/qa`: 50 VUs × 5 min, p95 < 300 ms, 0 % 5xx (`--vus`, `--duration`, `--target`) |
-| `security-scan` | pip-audit, npm audit, bandit, gitleaks, trivy fs (`--strict`, `--only`, `--images` from Phase 8) |
+| `security-scan` | pip-audit, npm audit, bandit, gitleaks, trivy fs; `--images` scans the three images (`--strict`, `--only`) |
 | `build-index` | Build and verify the index from `corpus/` (`--inspect` for chunk statistics) |
 | `verify-determinism` | SC1: N isolated rebuilds with different hash seeds must be byte-identical |
 | `dev` | API (uvicorn `--reload`) and web (Vite) together (`--api-only`, `--web-only`) |
@@ -140,6 +149,9 @@ Since 1.2 and 1.3 (all additive):
 | `eval` | Evaluation scorecard (SC2, SC3, false validations); `--gate` for CI, `--split test` once per frozen config |
 | `db-migrate` | Alembic migrations for `DATABASE_URL` (`--revision`, `--downgrade`, `--current`) |
 | `seed` | Migrate, then the admin account; `--demo` adds reviewer/user accounts and a week of history (`--reset`, `--reset-password`) |
+| `docker-up` / `docker-down` / `docker-rebuild` / `docker-logs` | The Compose stack on http://localhost:8080 (`--demo`, `--observability`, `--volumes`) |
+| `k8s-up` / `k8s-down` / `k8s-status` / `k8s-port-forward` | kind + Envoy Gateway on http://localhost:8088 (`--recreate`, `--existing-cluster`, `--overlay prod` renders only) |
+| `k8s-verify` | Zero failed requests during a rolling restart and an index rollout/rollback under k6 load |
 | `gen-client` | Export `backend/openapi.json` and regenerate the frontend's TypeScript API types (`--check` for CI) |
 
 More scripts arrive with later phases (`plan.md` §5).

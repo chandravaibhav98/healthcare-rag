@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-config
+data:
+  APP_ENV: production
+  # Behind the gateway, per-pod limits (OI-11): 3 replicas allow ~3x this per client.
+  RATE_LIMIT_QA: 60/minute
+  LOGIN_RATE_LIMIT: 10/minute
+  # Production should require sign-in unless the organisation decides otherwise.
+  ALLOW_ANONYMOUS_QA: "false"

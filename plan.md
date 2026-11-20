@@ -516,15 +516,17 @@ Even with a synthetic corpus, users could type real patient information into que
 
 **Deliverables checklist**
 
-- [ ] `api.Dockerfile`: multi-stage, non-root UID, `HEALTHCHECK`, no secrets, `.dockerignore`, deterministic `uv sync --frozen`
-- [ ] `web.Dockerfile`: Node build stage → nginx-unprivileged; SPA fallback; gzip; cache headers; security headers including CSP
-- [ ] `index.Dockerfile`: runs `pipeline.py build` and prints the manifest hash, which must match the CI determinism hash
-- [ ] `docker-compose.yml`: `postgres` (healthcheck, volume), `migrate` (one-shot), `indexer` (one-shot), `api` (depends on the healthy and completed services), `web`
-- [ ] `docker-compose.observability.yml` profile: Prometheus and Grafana with a provisioned **RAG dashboard JSON**
-- [ ] Scripts: `docker-up.*`, `docker-down.*`, `docker-rebuild.*`, `docker-logs.*`, `smoke.*`
-- [ ] Image size budget (API under about 400 MB) and a clean Trivy scan (no criticals)
+- [x] `api.Dockerfile`: multi-stage, non-root UID, `HEALTHCHECK`, no secrets, `.dockerignore`, deterministic `uv sync --frozen`
+- [x] `web.Dockerfile`: Node build stage → nginx-unprivileged; SPA fallback; gzip; cache headers; security headers including CSP
+- [x] `index.Dockerfile`: runs `pipeline.py build` and prints the manifest hash, which must match the CI determinism hash
+- [x] `docker-compose.yml`: `postgres` (healthcheck, volume), `migrate` (one-shot), `indexer` (one-shot), `api` (depends on the healthy and completed services), `web`
+- [x] `docker-compose.observability.yml` profile: Prometheus and Grafana with a provisioned **RAG dashboard JSON**
+- [x] Scripts: `docker-up.*`, `docker-down.*`, `docker-rebuild.*`, `docker-logs.*`, `smoke.*`
+- [x] Image size budget (API under about 400 MB) and a clean Trivy scan (no criticals)
 
 **Exit criteria:** on a clean machine, `scripts/docker-up.sh` brings up a working stack and smoke tests pass.
+
+**Status (2026-11-20):** ✅ done. `docker-up` (bash and PowerShell) builds, starts, seeds and smoke-tests the stack; the 20 E2E tests and a 50-VU k6 run pass through nginx + PostgreSQL; the index image reproduces `index_version` 6ce73ffaf982. Verified in a sandbox with stand-in base images (OI-37). See `docs/project/phase-8-report.md` and ADR-0014.
 
 ---
 
@@ -540,16 +542,18 @@ Even with a synthetic corpus, users could type real patient information into que
 
 **Deliverables checklist**
 
-- [ ] `base/`: Namespace; API Deployment (2 replicas, **init container copying the index image into an `emptyDir`**, startup, readiness and liveness probes, resource requests and limits, `runAsNonRoot`, `readOnlyRootFilesystem`, `seccompProfile: RuntimeDefault`); Service; web Deployment and Service; ConfigMap; Secret template; migration Job (Argo/Helm-hook style, or run before rollout)
-- [ ] HPA (CPU 70%, 2–6 replicas), PodDisruptionBudget (minAvailable 1), NetworkPolicies (web → api → postgres only), ServiceAccount with no token automount
-- [ ] Gateway API `Gateway` + `HTTPRoute` (or Ingress) routing `/` to web and `/api` to api
-- [ ] `overlays/local/` (kind, in-cluster Postgres, NodePort/port-forward) and `overlays/prod/` (managed DB, TLS, larger resources)
-- [ ] Optional ServiceMonitor for the Prometheus Operator
-- [ ] Scripts: `k8s-up.*` (create kind cluster, build and load images, apply, wait for rollout), `k8s-down.*`, `k8s-status.*`, `k8s-port-forward.*`
-- [ ] Rolling-update verification: zero failed requests during `kubectl rollout restart` under k6 load
-- [ ] Index rollout and rollback: change the index image tag, roll out, and roll back with `kubectl rollout undo`
+- [x] `base/`: Namespace; API Deployment (2–6 replicas via the HPA, **init container copying the index image into an `emptyDir`**, startup, readiness and liveness probes, resource requests and limits, `runAsNonRoot`, `readOnlyRootFilesystem`, `seccompProfile: RuntimeDefault`); Service; web Deployment and Service; ConfigMap; Secret template (`overlays/local/secrets.env.example`, prod `ExternalSecret`); migration Job (Argo/Helm-hook style, or run before rollout)
+- [x] HPA (CPU 70%, 2–6 replicas), PodDisruptionBudget (minAvailable 1), NetworkPolicies (web → api → postgres only), ServiceAccount with no token automount
+- [x] Gateway API `Gateway` + `HTTPRoute` (or Ingress) routing `/` to web and `/api` to api
+- [x] `overlays/local/` (kind, in-cluster Postgres, NodePort/port-forward) and `overlays/prod/` (managed DB, TLS, larger resources)
+- [x] Optional ServiceMonitor for the Prometheus Operator
+- [x] Scripts: `k8s-up.*` (create kind cluster, build and load images, apply, wait for rollout), `k8s-down.*`, `k8s-status.*`, `k8s-port-forward.*`
+- [x] Rolling-update verification: zero failed requests during `kubectl rollout restart` under k6 load
+- [x] Index rollout and rollback: change the index image tag, roll out, and roll back with `kubectl rollout undo`
 
 **Exit criteria:** `scripts/k8s-up.sh` brings up a working cluster from scratch, and the E2E suite passes against it.
+
+**Status (2026-11-20):** ✅ done. From an empty namespace `k8s-up` deploys, migrates, seeds and smoke-tests; the E2E suite passes 20/20 through the Gateway; `k8s-verify` shows zero failed requests during a rolling restart and an index rollout + rollback under k6 load. Verified on k3s with Traefik as the Gateway API implementation; the kind + Envoy Gateway path first runs in CI (OI-37). See `docs/project/phase-9-report.md` and ADR-0015.
 
 ---
 
@@ -655,8 +659,9 @@ tag:   release notes → prod overlay manifests rendered as an artifact
 | `load-test` | k6 against `/qa` | `--vus`, `--duration`, `--target`, `--port`, `--p95` |
 | `lint` / `format` | ruff, mypy, eslint, prettier, tsc | `--fix` |
 | `gen-client` | Export OpenAPI and regenerate TS types | — |
-| `docker-up` / `docker-down` / `docker-rebuild` / `docker-logs` | Compose lifecycle | `--observability`, `--volumes` |
+| `docker-up` / `docker-down` / `docker-rebuild` / `docker-logs` | Compose lifecycle | `--demo`, `--observability`, `--volumes`, `--no-cache` |
 | `k8s-up` / `k8s-down` / `k8s-status` / `k8s-port-forward` | kind cluster plus Kustomize lifecycle | `--overlay local\|prod`, `--recreate` |
+| `k8s-verify` | Rolling restart and index rollout/rollback under k6 load: zero failed requests | `--vus`, `--duration`, `--skip-restart`, `--skip-index` |
 | `e2e` | Playwright functional suite | `--headed`, `--target local\|docker\|k8s` |
 | `demo-record` | Seed, record the demo, convert to MP4 | `--target`, `--keep-webm` |
 | `smoke` | Hit `/healthz`, `/readyz` and a sample `/qa` | `--base-url` |
@@ -773,10 +778,8 @@ owning phase · 🟢 tracked, low risk
 
 | # | Issue | Owner | Status |
 | --- | --- | --- | --- |
-| OI-11 | Rate limiting (`/qa` and, since Phase 5, login) is per process; several replicas need a shared store (Redis) behind the same `TokenBucketLimiter` interface | Phase 8/9 (ADR-0008) | 🟢 |
-| OI-13 | The community ingress-nginx controller is retired: verify current status and prefer Gateway API | Phase 9 | 🟢 |
+| OI-11 | Rate limiting (`/qa` and, since Phase 5, login) is per process; with the Phase 9 HPA (2–6 pods) a client gets up to N× the limit. A shared store (Redis) behind the same `TokenBucketLimiter` interface, or limits at the gateway | Phase 10+ (ADR-0008) | 🟢 |
 | OI-14 | npm `overrides` pins `minimatch` 11.0.5 for a Dependabot advisory; remove the override once the dependents ship a fixed range | Any phase, on Dependabot updates | 🟢 |
-| OI-15 | Phase 0 shell scripts are committed as mode `100644`. CI calls them with `bash`, so nothing breaks, but `./scripts/x.sh` fails on Linux/macOS. Fix: `git update-index --chmod=+x scripts/*.sh` | Any phase | 🟢 |
 | OI-16 | Housekeeping: delete the `_staging/` folder in the old outer project folder (verification tarballs only) | Owner, manual | 🟢 |
 | OI-23 | Promoted reviews export as gold **candidates** (JSONL); merging them into `gold_source.yaml` is manual (DATASET_CARD §7). A small `evaluation.import_candidates --check` would make it repeatable | Phase 6/7 | 🟢 |
 | OI-24 | ADR-0008 names an `AuthProvider` protocol for OIDC; only local accounts exist. Needed before connecting the organisation's identity provider | Phase 12 (RUNBOOK) or later | 🟢 |
@@ -785,11 +788,14 @@ owning phase · 🟢 tracked, low risk
 | OI-30 | The SPA bundle (gzip): 63 kB app + 78 kB React + 37 kB forms; dashboard adds 13 kB + 118 kB charts. Fine for an internal tool; measure on a slow profile before any public deployment | Phase 8 (nginx caching) or before a public deployment | 🟢 |
 | OI-31 | **The Phase 7 CI jobs have not run on GitHub yet.** Every gate ran locally (Windows Git Bash VM) or in a Linux sandbox with the same commands, and `actionlint` passes; the first push confirms the exit criterion | Owner, on push | 🟠 |
 | OI-32 | Trivy's vulnerability database could not be downloaded in the verification sandbox (registry blocked), so `trivy fs` was verified for misconfiguration only; its lockfile CVE scan first runs in CI. pip-audit and npm audit cover the same lockfiles and are clean | CI first run | 🟢 |
-| OI-33 | Trivy **image** scanning needs the Phase 8 images; `security-scan --images` is a placeholder until then | Phase 8 | 🟠 |
+| OI-33 | Trivy **image** scanning is wired (`security-scan --images`, CI `images` job: no fixable CRITICAL) but, like OI-32, its vulnerability database cannot be downloaded in the sandbox: first real run in CI | CI first run | 🟢 |
 | OI-34 | GitHub's own actions (`actions/*`) and `astral-sh/setup-uv` are pinned by major tag; third-party actions and downloaded scanners are SHA-pinned. Pin all of them to SHAs with Dependabot updates | Phase 10 | 🟢 |
-| OI-35 | The Docker fallbacks in `security-scan.*` / `load-test.*` (gitleaks, trivy, k6 images) could not be pulled from the sandbox; k6 uses `grafana/k6:latest` unless `K6_IMAGE` is set. CI uses the checksum-verified binaries and `setup-k6-action` instead | Phase 8 (pin digests) | 🟢 |
+| OI-35 | Base images (`python:3.12-slim`, `node:26-slim`, `nginx-unprivileged:1.30-alpine`, `busybox:1.37`, `postgres:18-alpine`) and the scanner fallbacks are referenced by tag; k6's fallback is `grafana/k6:latest` unless `K6_IMAGE` is set. Pin by digest with automated updates | Phase 10 | 🟢 |
+| OI-37 | **Phase 8/9 verification ran on stand-ins.** The sandbox cannot reach Docker Hub/GHCR, so the Dockerfiles were built on local stand-ins for the base images (Ubuntu-based, same paths, users and ports), and Kubernetes ran on k3s with Traefik's Gateway API provider instead of kind + Envoy Gateway (the Envoy objects were validated against its CRDs with a server-side dry run). CI's `images` and `kubernetes` jobs are the first runs on the real images and on kind | CI first run | 🟠 |
+| OI-38 | No egress NetworkPolicies: the API may open any outbound connection. In prod, restrict to DNS, the database and the OTLP endpoint once their addresses are known | Phase 12 (RUNBOOK) / platform team | 🟢 |
 | OI-36 | Schemathesis' pytest plugin does not support pytest 9, so the contract tests use its Python API inside parametrized tests. Switch back if the plugin catches up | Dependency updates | 🟢 |
 
 Closed in Phase 4 (outcomes in `docs/project/phase-4-report.md` §4): OI-3, OI-4, OI-5,
 OI-6, OI-7. Closed in Phase 5 (`docs/project/phase-5-report.md` §4): OI-12. Closed in
-Phase 7 (`docs/project/phase-7-report.md` §4): OI-29.
+Phase 7 (`docs/project/phase-7-report.md` §4): OI-29. Closed in Phase 9
+(`docs/project/phase-9-report.md` §4): OI-13, OI-15 (shell scripts are now executable in Git).

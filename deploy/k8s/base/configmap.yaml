@@ -1,0 +1,27 @@
+# Non-secret API settings (every key is documented in .env.example). Secrets
+# (DATABASE_URL, JWT_SECRET, SEED_ADMIN_PASSWORD) come from the `hcrag-secrets` Secret,
+# which each overlay provides: a generated Secret locally, an ExternalSecret in prod.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-config
+  labels: { app.kubernetes.io/component: api }
+data:
+  APP_ENV: production
+  LOG_LEVEL: INFO
+  LOG_FORMAT: json
+  LOG_QUESTION_TEXT: "false"
+  ALLOW_ANONYMOUS_QA: "true"
+  # In-process limits are per pod (OI-11): with N replicas a client gets up to N times this.
+  RATE_LIMIT_QA: 60/minute
+  LOGIN_RATE_LIMIT: 10/minute
+  # The API is reachable only from the gateway and the web pods (NetworkPolicy), so
+  # their X-Forwarded-For is trusted for the client address.
+  FORWARDED_ALLOW_IPS: "*"
+  # Replicas follow runtime tuning and index activations within this many seconds.
+  CONFIG_POLL_SECONDS: "30"
+  METRICS_ENABLED: "true"
+  QUERY_LOG_RETENTION_DAYS: "30"
+  # Index rebuilds happen in CI and ship as rag-index images (ADR-0008); never in a pod.
+  ALLOW_INDEX_REBUILD: "false"
+  SEED_ADMIN_EMAIL: admin@example.org

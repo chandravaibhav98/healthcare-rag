@@ -1,7 +1,8 @@
 # CI: lint + typecheck + tests on every PR and on main, the SC1 determinism gate
-# (byte-identical index on Linux and Windows), the Phase 4 evaluation gate and the
-# Phase 7 quality gates: coverage targets, Schemathesis contract fuzzing, Playwright E2E,
-# the k6 load test and security scanning.
+# (byte-identical index on Linux and Windows), the Phase 4 evaluation gate, the
+# Phase 7 quality gates (coverage, Schemathesis, Playwright E2E, k6, security scans),
+# the Phase 8 container gates (images, Compose stack, image scan) and the Phase 9
+# Kubernetes gates (manifest schemas; kind deploy, E2E, zero-downtime rollouts).
 # Jobs call scripts/*, the same entry points a developer uses, so "green on CI" and
 # "green on my machine" mean the same thing. Phase 10 extends this pipeline.
 #
@@ -199,6 +200,161 @@ jobs:
       # --strict fails the job if any scanner cannot run.
       - name: Security scan
         run: bash scripts/security-scan.sh --strict --ci
+
+  manifests:
+    name: Kubernetes manifests (kustomize + kubeconform)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install kubeconform (checksum-verified)
+        env:
+          KUBECONFORM_VERSION: v0.8.0
+          KUBECONFORM_SHA256: 9bc2bffbf71f261128533edaf912153948b7ff238f9a531ae6d34466ec287883 # pragma: allowlist secret (SHA-256, not a secret)
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP"
+          curl -fsSLo kc.tgz "https://github.com/yannh/kubeconform/releases/download/${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz"
+          echo "${KUBECONFORM_SHA256}  kc.tgz" | sha256sum -c -
+          tar -xzf kc.tgz kubeconform
+          echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
+      # Every overlay must render and every object must match its schema, CRDs included
+      # (Gateway API, EnvoyProxy, ExternalSecret, ServiceMonitor from the CRDs catalog).
+      - name: Render and validate base, local and prod
+        run: |
+          set -euo pipefail
+          cp deploy/k8s/overlays/local/secrets.env.example deploy/k8s/overlays/local/secrets.env
+          for overlay in base overlays/local overlays/prod; do
+            echo "== $overlay"
+            kubectl kustomize "deploy/k8s/$overlay" | kubeconform -strict -summary \
+              -schema-location default \
+              -schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json'
+          done
+
+  images:
+    name: images + Compose stack (smoke, E2E, image scan)
+    needs: determinism
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      # One host drives the whole E2E suite and smoke test; production limits stay in .env.
+      RATE_LIMIT_QA: 6000/minute
+      LOGIN_RATE_LIMIT: 600/minute
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
+        with:
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+      - run: uv sync --locked --directory backend
+      - name: Build images, start the stack, seed, smoke test through nginx
+        run: bash scripts/docker-up.sh --demo --ci
+      # SC1 end to end: the index baked into the image is the one the determinism job built.
+      - uses: actions/download-artifact@v8
+        with:
+          name: manifest-Linux
+          path: determinism
+      - name: Index image matches the determinism build
+        run: |
+          set -euo pipefail
+          want=$(python3 -c 'import json;print(json.load(open("determinism/manifest-Linux.json"))["index_version"])')
+          got=$(docker run --rm --network none rag-index:build cat /index/manifest.json | python3 -c 'import json,sys;print(json.load(sys.stdin)["index_version"])')
+          echo "determinism: $want  image: $got"
+          test "$want" = "$got"
+      - name: Image size budget (rag-api < 400 MB)
+        run: |
+          size=$(docker image inspect rag-api:local --format '{{.Size}}')
+          echo "rag-api: $((size / 1024 / 1024)) MB"
+          test "$size" -lt $((400 * 1024 * 1024))
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: e2e/package-lock.json
+      - name: E2E against the Compose stack
+        run: |
+          set -euo pipefail
+          npm ci --prefix e2e --no-audit --no-fund
+          npm --prefix e2e exec -- playwright install --with-deps chromium
+          E2E_PASSWORD=$(sed -n 's/^SEED_ADMIN_PASSWORD=//p' deploy/compose/.env) \
+          E2E_BASE_URL=http://localhost:8080 npm --prefix e2e test
+      - name: Install trivy (checksum-verified)
+        env:
+          TRIVY_VERSION: 0.76.2
+          TRIVY_SHA256: bc0fc726e017b8927a62b2d3531d7a84ee01769daf5c99ed866dced54089fdbf # pragma: allowlist secret (SHA-256, not a secret)
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/bin" && cd "$RUNNER_TEMP"
+          curl -fsSLo trivy.tgz "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz"
+          echo "${TRIVY_SHA256}  trivy.tgz" | sha256sum -c -
+          tar -xzf trivy.tgz -C bin trivy
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+      - name: Image scan (no fixable CRITICAL)
+        run: bash scripts/security-scan.sh --only trivy --images --strict --ci
+      - name: Compose logs
+        if: failure()
+        run: bash scripts/docker-logs.sh --tail 300
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: compose-e2e-report
+          path: e2e/playwright-report/
+          if-no-files-found: ignore
+
+  kubernetes:
+    name: kind deploy (E2E, rolling restart, index rollback)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
+        with:
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+      - run: uv sync --locked --directory backend
+      - name: Install kind (checksum-verified)
+        env:
+          KIND_VERSION: v0.33.0
+          KIND_SHA256: aee6151561422756b764a4ae28e7f44cda5af5a9eead3cc9985112b1de8d8e0d # pragma: allowlist secret (SHA-256, not a secret)
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/bin"
+          curl -fsSLo "$RUNNER_TEMP/bin/kind" "https://github.com/kubernetes-sigs/kind/releases/download/${KIND_VERSION}/kind-linux-amd64"
+          echo "${KIND_SHA256}  $RUNNER_TEMP/bin/kind" | sha256sum -c -
+          chmod +x "$RUNNER_TEMP/bin/kind"
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+      - uses: grafana/setup-k6-action@c47136d33d365efbeb9ae7266908b5dcf98cdece # v1.3.0
+        with:
+          k6-version: "2.4.0"
+      - name: kind cluster + Envoy Gateway + the app (scripts/k8s-up.sh)
+        run: bash scripts/k8s-up.sh --ci
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: e2e/package-lock.json
+      - name: E2E against the cluster
+        run: |
+          set -euo pipefail
+          npm ci --prefix e2e --no-audit --no-fund
+          npm --prefix e2e exec -- playwright install --with-deps chromium
+          E2E_PASSWORD=$(sed -n 's/^SEED_ADMIN_PASSWORD=//p' deploy/k8s/overlays/local/secrets.env) \
+          E2E_BASE_URL=http://localhost:8088 npm --prefix e2e test
+      - name: Zero-downtime checks (rolling restart, index rollout and rollback)
+        run: bash scripts/k8s-verify.sh --ci
+      - name: Cluster state
+        if: always()
+        run: |
+          bash scripts/k8s-status.sh --ci || true
+          kubectl --context kind-healthcare-rag -n healthcare-rag get events --sort-by=.lastTimestamp | tail -50 || true
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: kubernetes-verify
+          path: |
+            artifacts/k8s-verify/
+            e2e/playwright-report/
+          if-no-files-found: ignore
 
   determinism:
     name: index determinism (${{ matrix.os }})

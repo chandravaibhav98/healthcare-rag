@@ -1,0 +1,30 @@
+# Envoy Gateway for the local kind cluster (installed by scripts/k8s-up.*).
+#
+# GatewayClass `eg` is Envoy Gateway's conventional class. The EnvoyProxy turns the
+# gateway's data-plane Service into a NodePort on 30080, which kind maps to
+# http://localhost:8088 (deploy/k8s/kind/cluster.yaml): no load balancer needed.
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: eg
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: local-nodeport
+spec:
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyService:
+        type: NodePort
+        externalTrafficPolicy: Cluster
+        patch:
+          type: StrategicMerge
+          value:
+            spec:
+              ports:
+                - port: 80
+                  nodePort: 30080

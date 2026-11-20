@@ -29,6 +29,8 @@ supersedes it.
 | [0011](0011-bm25-ranking-default.md) | BM25 ranks by default; dense vectors score relevance | **Accepted** (Phase 4) | SC2, SC3 |
 | [0012](0012-frontend-architecture-and-accessibility.md) | Frontend architecture, generated API client, accessibility gate | **Accepted** (Phase 6) | SC4, R8 |
 | [0013](0013-quality-gates-and-supply-chain-pinning.md) | Quality gates, test tooling and supply-chain pinning | **Accepted** (Phase 7) | SC1–SC4, R3, R10 |
+| [0014](0014-container-images-and-compose.md) | Container images and the Compose stack | **Accepted** (Phase 8) | SC1, SC4 |
+| [0015](0015-kubernetes-deployment.md) | Kubernetes: Kustomize, Gateway API, index rollouts | **Accepted** (Phase 9) | SC4 |
 
 **Phase 0 exit** requires ADR-0001 and ADR-0002 to be *Accepted*: fill in their Approval tables, then change their status.
 

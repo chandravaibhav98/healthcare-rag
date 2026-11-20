@@ -5,6 +5,12 @@
 * Activating a version verifies and loads it into the `IndexRegistry` (in-flight requests
   finish on the old one), marks it active and audits the change. Other pods follow
   through the config poller (`sync_active`).
+* Kubernetes ships each index as an image (ADR-0008), so a rollout replaces the files at
+  the boot path. A recorded path therefore only counts if its manifest still names the
+  recorded version (`_holds`): a pod that boots a *different* index than the active one
+  makes its own index active (the deployment is the operator's decision), and a pod
+  never "follows" an activation whose files it does not have (Phase 9, old pods during
+  a rolling update).
 * Rebuilding from the admin API is for compose/dev only; in production new versions are
   built by CI and shipped as images (ADR-0008), and the API only lists and activates.
 """
@@ -45,6 +51,18 @@ class RebuildInProgressError(Exception):
     pass
 
 
+class IndexVersionUnavailableError(Exception):
+    """The version is registered, but its files are not present in this deployment."""
+
+
+def _holds(path: str | Path, version: str) -> bool:
+    """True if `path` contains the index `version` (its manifest says so)."""
+    try:
+        return str(read_manifest(Path(path))["index_version"]) == version
+    except (FileNotFoundError, ValueError, KeyError):
+        return False
+
+
 @dataclass
 class RebuildState:
     running: bool = False
@@ -72,6 +90,7 @@ class IndexService:
         self._build = build
         self.rebuild_state = RebuildState()
         self._rebuild_task: asyncio.Task[None] | None = None
+        self._unavailable_logged: set[str] = set()
 
     def _candidates(self) -> list[tuple[Path, str]]:
         found = [(self._boot_dir, "boot")]
@@ -103,6 +122,21 @@ class IndexService:
             if active is None:
                 await session.flush()
                 await version_repo.set_active(session, current)
+            elif active.version != current and not _holds(active.path, active.version):
+                # A rollout (or rollback) replaced the index files: the deployed index wins.
+                await session.flush()
+                await version_repo.set_active(session, current)
+                audit.record(
+                    session,
+                    SYSTEM,
+                    "index.activate",
+                    target_type="index_version",
+                    target_id=current,
+                    details={"previous": active.version, "reason": "deployment"},
+                )
+                _log.info(
+                    "index.activated", version=current, previous=active.version, source="deployment"
+                )
         await session.commit()
 
     async def versions(self, session: AsyncSession) -> Sequence[IndexVersion]:
@@ -112,6 +146,8 @@ class IndexService:
         row = await version_repo.get(session, version)
         if row is None:
             raise UnknownIndexVersionError(version)
+        if not _holds(row.path, version):
+            raise IndexVersionUnavailableError(version)
         previous = self._registry.current().index_version if self._registry.is_loaded else None
         await run_in_threadpool(self._registry.load, Path(row.path))  # verifies hashes first
         await version_repo.set_active(session, version)
@@ -134,6 +170,13 @@ class IndexService:
         if active is None or not self._registry.is_loaded:
             return False
         if active.version == self._registry.current().index_version:
+            return False
+        if not _holds(active.path, active.version):
+            # Typically an old pod during a rolling update: the new index is in the new
+            # pods' image, not here. Keep serving; this pod is about to be replaced.
+            if active.version not in self._unavailable_logged:
+                self._unavailable_logged.add(active.version)
+                _log.warning("index.active_unavailable", version=active.version, path=active.path)
             return False
         await run_in_threadpool(self._registry.load, Path(active.path))
         _log.info("index.activated", version=active.version, source="poll")

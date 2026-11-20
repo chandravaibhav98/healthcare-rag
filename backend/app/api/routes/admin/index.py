@@ -23,6 +23,7 @@ from app.rag.pipeline import IndexIntegrityError
 from app.services import admin_service
 from app.services.index_service import (
     IndexService,
+    IndexVersionUnavailableError,
     RebuildInProgressError,
     UnknownIndexVersionError,
 )
@@ -91,6 +92,12 @@ async def activate_version(
         row = await service.activate(session, version, actor)
     except UnknownIndexVersionError as exc:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Index version not found.") from exc
+    except IndexVersionUnavailableError as exc:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            f"Index {version} is not available in this deployment: its files were replaced "
+            "by a later rollout. Roll the deployment back to that index image instead.",
+        ) from exc
     except (IndexIntegrityError, FileNotFoundError) as exc:
         raise HTTPException(
             status.HTTP_409_CONFLICT, f"Index {version} failed verification: {exc}"
