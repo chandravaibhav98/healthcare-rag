@@ -108,5 +108,6 @@ files are not in the running pods answers 409: roll the deployment instead.
 `deploy/k8s/overlays/prod`: managed PostgreSQL (`DATABASE_URL`) and `JWT_SECRET` from an
 `ExternalSecret`, HTTPS on the Gateway with a cert-manager certificate and an HTTP→HTTPS
 redirect, 3+ replicas, sign-in required, ServiceMonitor. Replace `rag.example.org` and
-the image names; the release pipeline (Phase 10) sets the tags and applies it.
+the image names. A `v*` release renders it with every image pinned by digest
+(`healthcare-rag-<tag>.yaml` on the GitHub Release, [`docs/releasing.md`](../docs/releasing.md)).
 `scripts/k8s-up.sh --overlay prod` only renders it to `artifacts/k8s-prod.yaml`.

@@ -5,7 +5,11 @@
 
 ## Workflow: trunk-based
 
-- `main` is always releasable and protected. CI (`.github/workflows/ci.yml`) must be green.
+- `main` is always releasable and protected. The required check is **`ci-passed`**
+  (`.github/workflows/ci.yml`), which only passes when every gate passed. Rules are code:
+  `.github/rulesets/`, applied with `scripts/github-protect.sh`.
+- Every green push to `main` publishes images to GHCR; a `v*` tag cuts a release from
+  them without a rebuild ([`docs/releasing.md`](docs/releasing.md)).
 - Work on **short-lived branches** (at most a few days), named `<type>/<short-topic>`,
   e.g. `feat/hybrid-retrieval`, `fix/chunker-tables`, `docs/adr-0003`.
 - Open a PR early. **Squash-merge** with a Conventional Commit title.
@@ -58,7 +62,8 @@ identical flags). CI calls the same scripts, so "green locally" means "green in 
 | Local Kubernetes (kind) and its checks | `scripts/k8s-up.sh` · `k8s-verify` · `k8s-status` · `k8s-port-forward` · `k8s-down` (and `.ps1`) |
 
 A new script must ship as a `.sh` + `.ps1` pair, support `--help`, be idempotent, and
-return non-zero on failure. Shared helpers live in `scripts/lib/`.
+return non-zero on failure. Shared helpers live in `scripts/lib/`. Exception:
+`scripts/ci/` holds bash-only helpers that only the Linux CI runners call.
 
 ## Quality gates (pre-commit + CI)
 
@@ -71,8 +76,10 @@ return non-zero on failure. Shared helpers live in `scripts/lib/`.
   backend ≥ 80 %, frontend ≥ 70 %), Schemathesis contract fuzzing, the evaluation
   regression tests, Playwright E2E + axe, the k6 load test and the security scan. Each
   one is a script you can run locally first.
-- New third-party GitHub Actions are pinned to a full commit SHA with the version in a
-  comment; downloaded tools are checked against a recorded SHA-256.
+- Every GitHub Action (GitHub's own included) is pinned to a full commit SHA with the
+  version in a comment; Dependabot updates both. Downloaded tools are checked against a
+  recorded SHA-256.
+- A new CI job is a gate only once it is listed in `ci-passed`'s `needs:`.
 
 ## Contracts
 

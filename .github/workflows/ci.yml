@@ -1,17 +1,26 @@
-# CI: lint + typecheck + tests on every PR and on main, the SC1 determinism gate
-# (byte-identical index on Linux and Windows), the Phase 4 evaluation gate, the
-# Phase 7 quality gates (coverage, Schemathesis, Playwright E2E, k6, security scans),
-# the Phase 8 container gates (images, Compose stack, image scan) and the Phase 9
-# Kubernetes gates (manifest schemas; kind deploy, E2E, zero-downtime rollouts).
-# Jobs call scripts/*, the same entry points a developer uses, so "green on CI" and
-# "green on my machine" mean the same thing. Phase 10 extends this pipeline.
+# CI (Phase 10, ADR-0016): every quality gate of plan.md on every pull request, on the
+# merge queue and on main. Jobs call scripts/*, the same entry points a developer uses, so
+# "green on CI" and "green on my machine" mean the same thing.
 #
-# Third-party actions are pinned to a full commit SHA (tags can be force-pushed, as the
-# March 2026 trivy-action compromise showed); GitHub's own actions use major tags.
+#   changes ─┬─ quality (Linux + Windows) · contract · e2e · load · security · hygiene
+#            ├─ determinism (Linux + Windows) ─ determinism-cross-os
+#            ├─ evaluation · manifests
+#            └─ build (bake, once) ─┬─ images      (Compose stack, E2E, image scan)
+#                                   └─ kubernetes  (kind, E2E, rollouts, rollback)
+#   ci-passed: the single required status check; fails unless every gate passed.
+#
+# Build once, test, publish the same bits: `build` makes the three images with Buildx bake
+# (GitHub Actions layer cache) and hands them to `images` and `kubernetes` as an artifact.
+# release.yml then pushes exactly that artifact from a green main run; nothing is rebuilt.
+#
+# Supply chain: every action is pinned to a full commit SHA (the version is in the comment;
+# Dependabot keeps both current), and downloaded binaries are checked against a SHA-256.
+# The workflow token is read-only; only release.yml can write packages.
 name: ci
 
 on:
   pull_request:
+  merge_group:
   push:
     branches: [main]
   workflow_dispatch:
@@ -21,11 +30,40 @@ permissions:
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Superseded PR runs are cancelled; main runs always finish (release.yml publishes them).
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  # Docs-only pull requests (Markdown, docs/, rulesets) skip the heavy jobs; hygiene still
+  # runs and ci-passed still reports, so the required check is never left pending.
+  changes:
+    name: changes
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      code: ${{ steps.diff.outputs.code }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - id: diff
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          if [[ "$EVENT" != pull_request ]]; then echo "code=true" >>"$GITHUB_OUTPUT"; exit 0; fi
+          files=$(git diff --name-only "$BASE...$HEAD")
+          echo "$files"
+          code_files=$(grep -Ev '^(docs/|.*\.md$|LICENSE$|\.github/rulesets/)' <<<"$files" || true)
+          if [[ -n "$code_files" ]]; then code=true; else code=false; fi
+          echo "code=$code" | tee -a "$GITHUB_OUTPUT"
+
   quality:
     name: lint + typecheck + tests (${{ matrix.os }})
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -34,14 +72,14 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: astral-sh/setup-uv@v10
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           enable-cache: true
           cache-dependency-glob: backend/uv.lock
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -70,7 +108,7 @@ jobs:
 
       - name: Upload coverage
         if: runner.os != 'Windows' && always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: coverage
           path: |
@@ -81,11 +119,13 @@ jobs:
 
   contract:
     name: contract fuzzing (Schemathesis, 100 examples per operation)
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           enable-cache: true
           cache-dependency-glob: backend/uv.lock
@@ -99,15 +139,17 @@ jobs:
 
   e2e:
     name: Playwright E2E (Chromium)
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           enable-cache: true
           cache-dependency-glob: backend/uv.lock
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -119,7 +161,7 @@ jobs:
         run: bash scripts/setup.sh --ci --no-verify
       - name: Functional E2E
         run: bash scripts/test.sh --e2e --ci
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
           name: playwright-report
@@ -130,11 +172,13 @@ jobs:
 
   load:
     name: k6 load test (/qa, p95 < 300 ms, 0 % 5xx)
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           enable-cache: true
           cache-dependency-glob: backend/uv.lock
@@ -148,7 +192,7 @@ jobs:
         env:
           DURATION: ${{ github.event_name == 'pull_request' && '1m' || '5m' }}
         run: bash scripts/load-test.sh --vus 50 --duration "$DURATION" --ci
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
           name: load-test
@@ -159,17 +203,19 @@ jobs:
 
   security:
     name: security scan (pip-audit, npm audit, bandit, gitleaks, trivy)
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0 # gitleaks scans the whole history
-      - uses: astral-sh/setup-uv@v10
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           enable-cache: true
           cache-dependency-glob: backend/uv.lock
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -203,10 +249,12 @@ jobs:
 
   manifests:
     name: Kubernetes manifests (kustomize + kubeconform)
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Install kubeconform (checksum-verified)
         env:
           KUBECONFORM_VERSION: v0.8.0
@@ -231,9 +279,51 @@ jobs:
               -schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json'
           done
 
+  build:
+    name: build images (Buildx bake, once)
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    outputs:
+      index_version: ${{ steps.save.outputs.index_version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      # api, web and index from deploy/docker/docker-bake.hcl, built in parallel with a
+      # per-image layer cache in the GitHub Actions cache, and loaded into the local daemon.
+      - uses: docker/bake-action@59cb1203cd42bcefd40a1b6d73b589e48c86040e # v7.5.0
+        env:
+          TAG: local
+          CACHE: gha
+          GIT_SHA: ${{ github.sha }}
+          SOURCE_URL: ${{ github.server_url }}/${{ github.repository }}
+        with:
+          source: .
+          files: deploy/docker/docker-bake.hcl
+          load: true
+          # SBOMs (and optional signatures) are produced at publish time (release.yml);
+          # an image loaded into the daemon cannot carry attestations.
+          provenance: false
+      - id: save
+        run: bash scripts/ci/save-images.sh artifacts/images
+      - name: Image size budget (rag-api < 400 MB)
+        run: |
+          size=$(docker image inspect rag-api:local --format '{{.Size}}')
+          echo "rag-api: $((size / 1024 / 1024)) MB"
+          test "$size" -lt $((400 * 1024 * 1024))
+      # Kept for one day: long enough for the test jobs and release.yml, small on storage.
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: images
+          path: artifacts/images/
+          retention-days: 1
+          compression-level: 0
+          if-no-files-found: error
+
   images:
     name: images + Compose stack (smoke, E2E, image scan)
-    needs: determinism
+    needs: [build, determinism]
     runs-on: ubuntu-24.04
     timeout-minutes: 35
     env:
@@ -241,16 +331,22 @@ jobs:
       RATE_LIMIT_QA: 6000/minute
       LOGIN_RATE_LIMIT: 600/minute
     steps:
-      - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           enable-cache: true
           cache-dependency-glob: backend/uv.lock
       - run: uv sync --locked --directory backend
-      - name: Build images, start the stack, seed, smoke test through nginx
-        run: bash scripts/docker-up.sh --demo --ci
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: images
+          path: artifacts/images
+      - name: Load the images built by `build`
+        run: bash scripts/ci/load-images.sh artifacts/images
+      - name: Start the stack, seed, smoke test through nginx
+        run: bash scripts/docker-up.sh --no-build --demo --ci
       # SC1 end to end: the index baked into the image is the one the determinism job built.
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: manifest-Linux
           path: determinism
@@ -261,12 +357,7 @@ jobs:
           got=$(docker run --rm --network none rag-index:build cat /index/manifest.json | python3 -c 'import json,sys;print(json.load(sys.stdin)["index_version"])')
           echo "determinism: $want  image: $got"
           test "$want" = "$got"
-      - name: Image size budget (rag-api < 400 MB)
-        run: |
-          size=$(docker image inspect rag-api:local --format '{{.Size}}')
-          echo "rag-api: $((size / 1024 / 1024)) MB"
-          test "$size" -lt $((400 * 1024 * 1024))
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -294,7 +385,7 @@ jobs:
       - name: Compose logs
         if: failure()
         run: bash scripts/docker-logs.sh --tail 300
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
           name: compose-e2e-report
@@ -303,11 +394,12 @@ jobs:
 
   kubernetes:
     name: kind deploy (E2E, rolling restart, index rollback)
+    needs: build
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           enable-cache: true
           cache-dependency-glob: backend/uv.lock
@@ -326,9 +418,15 @@ jobs:
       - uses: grafana/setup-k6-action@c47136d33d365efbeb9ae7266908b5dcf98cdece # v1.3.0
         with:
           k6-version: "2.4.0"
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: images
+          path: artifacts/images
+      - name: Load the images built by `build`
+        run: bash scripts/ci/load-images.sh artifacts/images
       - name: kind cluster + Envoy Gateway + the app (scripts/k8s-up.sh)
-        run: bash scripts/k8s-up.sh --ci
-      - uses: actions/setup-node@v7
+        run: bash scripts/k8s-up.sh --no-build --ci
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -347,7 +445,7 @@ jobs:
         run: |
           bash scripts/k8s-status.sh --ci || true
           kubectl --context kind-healthcare-rag -n healthcare-rag get events --sort-by=.lastTimestamp | tail -50 || true
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
           name: kubernetes-verify
@@ -358,6 +456,8 @@ jobs:
 
   determinism:
     name: index determinism (${{ matrix.os }})
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -365,8 +465,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           enable-cache: true
           cache-dependency-glob: backend/uv.lock
@@ -378,7 +478,7 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: ./scripts/verify-determinism.ps1 --runs 3 --save-manifest determinism/manifest-${{ runner.os }}.json
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: manifest-${{ runner.os }}
           path: determinism/manifest-${{ runner.os }}.json
@@ -390,7 +490,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           pattern: manifest-*
           merge-multiple: true
@@ -403,18 +503,20 @@ jobs:
 
   evaluation:
     name: evaluation gate (dev pool, no regression)
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           enable-cache: true
           cache-dependency-glob: backend/uv.lock
       - run: uv sync --locked --directory backend
       - name: Build index, check gold files, run the gate
         run: bash scripts/eval.sh --split dev --gate
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
           name: evaluation-report
@@ -423,11 +525,12 @@ jobs:
 
   hygiene:
     name: pre-commit hygiene (whitespace, EOL, secrets, ruff)
+    needs: changes
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           enable-cache: true
           cache-dependency-glob: backend/uv.lock
@@ -436,3 +539,49 @@ jobs:
         env:
           SKIP: mypy,contract-snapshots,eslint,prettier,tsc
         run: uv run --directory backend pre-commit run --all-files --show-diff-on-failure
+
+  # The one required status check (branch ruleset, .github/rulesets/main.json). Listing
+  # every job here means a new gate is enforced by adding it to `needs`, with no settings
+  # change. A skipped gate counts as a failure unless the PR is docs-only.
+  ci-passed:
+    name: ci-passed
+    if: always()
+    needs:
+      - changes
+      - quality
+      - contract
+      - e2e
+      - load
+      - security
+      - manifests
+      - build
+      - images
+      - kubernetes
+      - determinism
+      - determinism-cross-os
+      - evaluation
+      - hygiene
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Every gate passed
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+          CODE: ${{ needs.changes.outputs.code }}
+        run: |
+          python3 - <<'PY'
+          import json, os, sys
+          needs = json.loads(os.environ["NEEDS"])
+          docs_only = os.environ["CODE"] == "false"
+          always = {"changes", "hygiene"}
+          bad = []
+          for job, r in sorted(needs.items()):
+              ok = r["result"] == "success" or (
+                  r["result"] == "skipped" and docs_only and job not in always)
+              print(f"{'ok  ' if ok else 'FAIL'} {job}: {r['result']}")
+              if not ok:
+                  bad.append(job)
+          if bad:
+              sys.exit(f"gates not passed: {', '.join(bad)}")
+          print("docs-only change: heavy gates skipped" if docs_only else "all gates passed")
+          PY

@@ -24,7 +24,8 @@ replaced by an organisation's secure guideline repository.
 | Phase 7: test hardening and quality gates | ✅ Coverage gates (backend 93 %, frontend 92 % lines), Schemathesis on every operation, 20 Playwright journeys + axe gate, k6 50 VUs × 5 min p95 179 ms / 0 % 5xx, security scans ([report](docs/project/phase-7-report.md)) |
 | Phase 8: containerization | ✅ Three hardened images (API, web, index), Compose stack with internal network and observability profile; E2E 20/20 and k6 through nginx ([report](docs/project/phase-8-report.md)) |
 | **Phase 9: Kubernetes** | ✅ Kustomize base + local/prod overlays, Gateway API, restricted Pod Security, NetworkPolicies, HPA/PDB; E2E 20/20 through the gateway; zero failed requests during rolling restart and index rollback ([report](docs/project/phase-9-report.md)) |
-| Phase 10: CI/CD pipeline | ⏭️ Next |
+| **Phase 10: CI/CD** | ✅ Images built once (Buildx bake) and tested, then published to GHCR with SBOMs and optional Cosign signatures. `v*` tags promote them and render the prod manifests pinned by digest. One required check (`ci-passed`); branch rules as code ([report](docs/project/phase-10-report.md), [releasing](docs/releasing.md)) |
+| Phase 11: Playwright demo video | ⏭️ Next |
 
 ## Quick start
 
@@ -152,6 +153,7 @@ Since 1.2 and 1.3 (all additive):
 | `docker-up` / `docker-down` / `docker-rebuild` / `docker-logs` | The Compose stack on http://localhost:8080 (`--demo`, `--observability`, `--volumes`) |
 | `k8s-up` / `k8s-down` / `k8s-status` / `k8s-port-forward` | kind + Envoy Gateway on http://localhost:8088 (`--recreate`, `--existing-cluster`, `--overlay prod` renders only) |
 | `k8s-verify` | Zero failed requests during a rolling restart and an index rollout/rollback under k6 load |
+| `github-protect` | Apply `.github/rulesets/` (PR + `ci-passed` required on `main`, immutable `v*` tags) with the GitHub CLI (`--dry-run`, `--repo`) |
 | `gen-client` | Export `backend/openapi.json` and regenerate the frontend's TypeScript API types (`--check` for CI) |
 
 More scripts arrive with later phases (`plan.md` §5).

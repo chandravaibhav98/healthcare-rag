@@ -570,12 +570,24 @@ tag:   release notes → prod overlay manifests rendered as an artifact
 
 **Deliverables checklist**
 
-- [ ] `ci.yml` with dependency caching for `uv` and npm, using a matrix (Linux for all jobs; Windows for determinism plus unit tests to prove PowerShell parity)
-- [ ] Evaluation report and Playwright HTML report uploaded as artifacts
-- [ ] Branch protection requires all gates
-- [ ] `release.yml` for image publish, SBOM and rendered manifests
+- [x] `ci.yml` with dependency caching for `uv` and npm, using a matrix (Linux for all jobs; Windows for determinism plus unit tests to prove PowerShell parity)
+- [x] Evaluation report and Playwright HTML report uploaded as artifacts
+- [x] Branch protection requires all gates (one aggregator check, `ci-passed`; rulesets as code in `.github/rulesets/`, applied by `scripts/github-protect.*`)
+- [x] `release.yml` for image publish, SBOM and rendered manifests
 
 **Exit criteria:** a PR cannot merge with a failing quality gate.
+
+**Status (2026-11-20):** ✅ done.
+- Images are built once (Buildx bake) and the build is tested; release publishes those
+  same bits to GHCR, with SBOMs and optional Cosign signatures.
+- A `v*` tag promotes the published images without a rebuild and renders the prod
+  overlay pinned by digest.
+- `ci-passed` is the single required check.
+- Verified with actionlint, shellcheck and a local-registry simulation of the publish
+  and release flows.
+- Enforcement needs a public repository or GitHub Pro for a private one (OI-39). The
+  first GitHub run confirms it (OI-31).
+- See `docs/project/phase-10-report.md`, `docs/releasing.md` and ADR-0016.
 
 ---
 
@@ -786,16 +798,18 @@ owning phase · 🟢 tracked, low risk
 | OI-25 | `/admin/stats` aggregates in Python from one windowed query; fine to about 1M rows per window, then move to SQL aggregates or a daily rollup table | When volume requires | 🟢 |
 | OI-26 | Windows CI cannot run Linux containers, so the PostgreSQL test variants run on Linux only (SQLite runs on both) | Phase 10 | 🟢 |
 | OI-30 | The SPA bundle (gzip): 63 kB app + 78 kB React + 37 kB forms; dashboard adds 13 kB + 118 kB charts. Fine for an internal tool; measure on a slow profile before any public deployment | Phase 8 (nginx caching) or before a public deployment | 🟢 |
-| OI-31 | **The Phase 7 CI jobs have not run on GitHub yet.** Every gate ran locally (Windows Git Bash VM) or in a Linux sandbox with the same commands, and `actionlint` passes; the first push confirms the exit criterion | Owner, on push | 🟠 |
+| OI-31 | **The Phase 7–10 CI and release jobs have not run on GitHub yet.** Every gate ran locally (Windows Git Bash VM) or in a Linux sandbox with the same commands, `actionlint` passes, and publish/release were simulated against a local registry; the first push (and first `v*` tag) confirms the exit criteria | Owner, on push | 🟠 |
 | OI-32 | Trivy's vulnerability database could not be downloaded in the verification sandbox (registry blocked), so `trivy fs` was verified for misconfiguration only; its lockfile CVE scan first runs in CI. pip-audit and npm audit cover the same lockfiles and are clean | CI first run | 🟢 |
 | OI-33 | Trivy **image** scanning is wired (`security-scan --images`, CI `images` job: no fixable CRITICAL) but, like OI-32, its vulnerability database cannot be downloaded in the sandbox: first real run in CI | CI first run | 🟢 |
-| OI-34 | GitHub's own actions (`actions/*`) and `astral-sh/setup-uv` are pinned by major tag; third-party actions and downloaded scanners are SHA-pinned. Pin all of them to SHAs with Dependabot updates | Phase 10 | 🟢 |
-| OI-35 | Base images (`python:3.12-slim`, `node:26-slim`, `nginx-unprivileged:1.30-alpine`, `busybox:1.37`, `postgres:18-alpine`) and the scanner fallbacks are referenced by tag; k6's fallback is `grafana/k6:latest` unless `K6_IMAGE` is set. Pin by digest with automated updates | Phase 10 | 🟢 |
+| OI-35 | Base images (`python:3.12-slim`, `node:26-slim`, `nginx-unprivileged:1.30-alpine`, `busybox:1.37`, `postgres:18-alpine`) and the scanner fallbacks are referenced by tag; k6's fallback is `grafana/k6:latest` unless `K6_IMAGE` is set. Dependabot (Phase 10) now proposes tag updates; pin by digest as well | Phase 12 hardening | 🟢 |
 | OI-37 | **Phase 8/9 verification ran on stand-ins.** The sandbox cannot reach Docker Hub/GHCR, so the Dockerfiles were built on local stand-ins for the base images (Ubuntu-based, same paths, users and ports), and Kubernetes ran on k3s with Traefik's Gateway API provider instead of kind + Envoy Gateway (the Envoy objects were validated against its CRDs with a server-side dry run). CI's `images` and `kubernetes` jobs are the first runs on the real images and on kind | CI first run | 🟠 |
 | OI-38 | No egress NetworkPolicies: the API may open any outbound connection. In prod, restrict to DNS, the database and the OTLP endpoint once their addresses are known | Phase 12 (RUNBOOK) / platform team | 🟢 |
+| OI-39 | **Branch protection needs a plan that supports it.** Rulesets (`.github/rulesets/`, `scripts/github-protect.*`) apply to public repositories on GitHub Free; a private repository needs Pro, Team or Enterprise. Until then `ci-passed` reports on every PR but does not block a merge | Owner: make public or upgrade | 🟠 |
+| OI-40 | Actions budget: a full CI run bills roughly 3 hours (Windows counts double); a private repository on Free gets 2,000 minutes and 500 MB storage a month (about 10–12 full runs; the 200 MB `images` artifact is kept 1 day). Public repositories: unlimited | Owner (same decision as OI-39) | 🟢 |
 | OI-36 | Schemathesis' pytest plugin does not support pytest 9, so the contract tests use its Python API inside parametrized tests. Switch back if the plugin catches up | Dependency updates | 🟢 |
 
 Closed in Phase 4 (outcomes in `docs/project/phase-4-report.md` §4): OI-3, OI-4, OI-5,
 OI-6, OI-7. Closed in Phase 5 (`docs/project/phase-5-report.md` §4): OI-12. Closed in
 Phase 7 (`docs/project/phase-7-report.md` §4): OI-29. Closed in Phase 9
 (`docs/project/phase-9-report.md` §4): OI-13, OI-15 (shell scripts are now executable in Git).
+Closed in Phase 10 (`docs/project/phase-10-report.md` §4): OI-34.
