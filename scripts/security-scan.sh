@@ -8,7 +8,7 @@
 #               type-narrowing asserts and subprocess calls ruff's "S" rules already gate)
 #   gitleaks    secrets in the git history (falls back to the working tree outside git)
 #   trivy fs    vulnerable lockfiles + IaC misconfiguration, fails on high or critical
-#   trivy image (--images) container images; arrives with the Dockerfiles in Phase 8
+#   trivy image (--images) rag-api, rag-web and rag-index images: no fixable CRITICAL
 #
 # gitleaks and trivy run from a local binary or, failing that, a pinned Docker image.
 # Without either they are skipped with a warning; --strict turns a skip into a failure
@@ -26,7 +26,7 @@ usage() {
   cat <<'USAGE'
 Usage: scripts/security-scan.sh [--images] [--strict] [--only NAME[,NAME]] [--ci] [-h|--help]
 
-  --images       Also scan the container images (Phase 8+)
+  --images       Also scan the rag-api, rag-web and rag-index images (Phase 8)
   --strict       Fail when gitleaks/trivy are unavailable instead of skipping them
   --only LIST    Run a subset: pip-audit,npm-audit,bandit,gitleaks,trivy
   --ci           Plain output (no colours)
@@ -105,8 +105,25 @@ if wanted trivy; then
     unavailable trivy
   fi
   if ((IMAGES)); then
-    log_step "trivy image"
-    log_warn "no container images yet: image scanning arrives with the Dockerfiles (plan Phase 8)"
+    # Plan Phase 8 gate: no CRITICAL vulnerability that has a fix. HIGH findings are
+    # printed for the report but do not fail the scan (base-image CVEs often have no fix).
+    log_step "trivy image (rag-api, rag-web, rag-index)"
+    for img in rag-api:local rag-web:local rag-index:build; do
+      if ! docker image inspect "$img" >/dev/null 2>&1; then
+        if ((STRICT)); then log_error "$img not built"; STEP_FAILURES+=("trivy image $img (missing)")
+        else log_warn "$img not built (scripts/docker-up.sh builds it); skipped"; fi
+        continue
+      fi
+      IMG_ARGS=(image --scanners vuln --ignore-unfixed --severity CRITICAL --exit-code 1 --no-progress "$img")
+      if command -v trivy >/dev/null 2>&1; then
+        run_step "trivy image $img" trivy "${IMG_ARGS[@]}"
+      elif have_docker; then
+        run_step "trivy image $img (docker)" docker run --rm -v /var/run/docker.sock:/var/run/docker.sock "$TRIVY_IMAGE" "${IMG_ARGS[@]}"
+      else
+        unavailable trivy
+        break
+      fi
+    done
   fi
 fi
 

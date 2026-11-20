@@ -16,7 +16,7 @@ function Show-Usage {
     @'
 Usage: scripts/security-scan.ps1 [--images] [--strict] [--only NAME[,NAME]] [--ci] [-h|--help]
 
-  --images       Also scan the container images (Phase 8+)
+  --images       Also scan the rag-api, rag-web and rag-index images (Phase 8)
   --strict       Fail when gitleaks/trivy are unavailable instead of skipping them
   --only LIST    Run a subset: pip-audit,npm-audit,bandit,gitleaks,trivy
   --ci           Plain output (no colours)
@@ -90,8 +90,19 @@ if (Test-Wanted 'trivy') {
         Invoke-Step 'trivy fs (docker)' docker ($dockerBase + @($TrivyImage) + $trivyArgs)
     } else { Skip-Scanner 'trivy' }
     if ($images) {
-        Write-Step 'trivy image'
-        Write-Warn 'no container images yet: image scanning arrives with the Dockerfiles (plan Phase 8)'
+        # Gate: no fixable CRITICAL vulnerability (plan Phase 8).
+        Write-Step 'trivy image (rag-api, rag-web, rag-index)'
+        foreach ($img in 'rag-api:local', 'rag-web:local', 'rag-index:build') {
+            & docker image inspect $img *> $null
+            if ($LASTEXITCODE -ne 0) {
+                if ($strict) { Add-StepFailure "trivy image $img (missing)" } else { Write-Warn "$img not built (scripts/docker-up.ps1 builds it); skipped" }
+                continue
+            }
+            $imgArgs = @('image', '--scanners', 'vuln', '--ignore-unfixed', '--severity', 'CRITICAL', '--exit-code', '1', '--no-progress', $img)
+            if (Get-Command trivy -ErrorAction SilentlyContinue) { Invoke-Step "trivy image $img" trivy $imgArgs }
+            elseif (Test-Docker) { Invoke-Step "trivy image $img (docker)" docker (@('run', '--rm', '-v', '/var/run/docker.sock:/var/run/docker.sock', $TrivyImage) + $imgArgs) }
+            else { Skip-Scanner 'trivy'; break }
+        }
     }
 }
 

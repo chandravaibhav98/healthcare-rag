@@ -1,0 +1,29 @@
+# Build context is the repository root (deploy/docker/*.Dockerfile). Keep it small and
+# free of secrets and local state: only what the three images need is sent to the daemon.
+**/.git
+**/.venv
+**/node_modules
+**/__pycache__
+**/*.py[cod]
+**/.mypy_cache
+**/.ruff_cache
+**/.pytest_cache
+**/.hypothesis
+**/.coverage*
+backend/coverage.*
+**/.DS_Store
+**/.env
+**/.env.*
+!**/.env.example
+artifacts/
+backend/artifacts/
+backend/evaluation/reports/
+backend/tests/
+frontend/dist/
+frontend/coverage/
+e2e/
+docs/
+deploy/k8s/
+.github/
+*.md
+!corpus/**/*.md

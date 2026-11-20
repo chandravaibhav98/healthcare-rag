@@ -1,0 +1,134 @@
+# Healthcare Guidelines RAG Assistant: the full stack on one machine (plan §4 Phase 8).
+#
+#   scripts/docker-up.sh            # build, start, wait, seed (recommended)
+#   docker compose -f deploy/compose/docker-compose.yml up -d --wait
+#
+# Start order (enforced with depends_on conditions):
+#   postgres (healthy) ─► migrate (exits 0) ─┐
+#   indexer (copies rag-index into the `index` volume, exits 0) ─┴► api (healthy) ─► web
+#
+# Only `web` publishes a port. The API, PostgreSQL and the migrations sit on an internal
+# network with no route to the outside; the browser reaches the API through nginx.
+name: healthcare-rag
+
+x-hardening: &hardening
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+  tmpfs: ["/tmp"]
+
+x-api-env: &api-env
+  # production by default; scripts/docker-up --demo uses staging, because demo accounts
+  # with a shared password are refused in production (scripts/seed.py).
+  APP_ENV: ${APP_ENV:-production}
+  LOG_FORMAT: json
+  LOG_LEVEL: ${LOG_LEVEL:-INFO}
+  LOG_QUESTION_TEXT: "false"
+  DATABASE_URL: postgresql+asyncpg://rag:${POSTGRES_PASSWORD:?run scripts/docker-up to create .env}@postgres:5432/rag
+  JWT_SECRET: ${JWT_SECRET:?run scripts/docker-up to create .env}
+  ALLOW_ANONYMOUS_QA: ${ALLOW_ANONYMOUS_QA:-true}
+  RATE_LIMIT_QA: ${RATE_LIMIT_QA:-60/minute}
+  LOGIN_RATE_LIMIT: ${LOGIN_RATE_LIMIT:-10/minute}
+  # Same origin through nginx, so no browser origin needs CORS.
+  CORS_ALLOW_ORIGINS: http://localhost:${WEB_PORT:-8080}
+  # Only nginx (on the internal network) can reach the API, so its X-Forwarded-For is
+  # trusted; the API port is never published.
+  FORWARDED_ALLOW_IPS: "*"
+  SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-admin@example.org}
+  SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-}
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: rag
+      POSTGRES_DB: rag
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?run scripts/docker-up to create .env}
+    volumes:
+      - pgdata:/var/lib/postgresql
+    networks: [backend]
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "rag", "-d", "rag"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  indexer:
+    image: ${INDEX_IMAGE:-rag-index:build}
+    build:
+      context: ../..
+      dockerfile: deploy/docker/index.Dockerfile
+    <<: *hardening
+    volumes:
+      - index:/target
+    network_mode: none
+    restart: "no"
+
+  migrate:
+    image: ${API_IMAGE:-rag-api:local}
+    <<: *hardening
+    command: ["python", "scripts/db.py", "upgrade"]
+    environment: *api-env
+    networks: [backend]
+    depends_on:
+      postgres: { condition: service_healthy }
+    restart: "no"
+
+  # One-shot, run on demand: docker compose run --rm seed [--demo]
+  seed:
+    image: ${API_IMAGE:-rag-api:local}
+    <<: *hardening
+    entrypoint: ["python", "scripts/seed.py"]
+    command: []
+    environment: *api-env
+    # --demo history is stamped with the active index_version.
+    volumes:
+      - index:/var/lib/rag/index:ro
+    networks: [backend]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      indexer: { condition: service_completed_successfully }
+    profiles: [tools]
+    restart: "no"
+
+  api:
+    image: ${API_IMAGE:-rag-api:local}
+    build:
+      context: ../..
+      dockerfile: deploy/docker/api.Dockerfile
+    <<: *hardening
+    environment: *api-env
+    volumes:
+      - index:/var/lib/rag/index:ro
+    networks: [backend, frontend]
+    expose: ["8000"]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      indexer: { condition: service_completed_successfully }
+    stop_grace_period: 25s
+    restart: unless-stopped
+
+  web:
+    image: ${WEB_IMAGE:-rag-web:local}
+    build:
+      context: ../..
+      dockerfile: deploy/docker/web.Dockerfile
+    <<: *hardening
+    ports:
+      - "127.0.0.1:${WEB_PORT:-8080}:8080"
+    networks: [frontend]
+    depends_on:
+      api: { condition: service_healthy }
+    restart: unless-stopped
+
+networks:
+  # No external route: PostgreSQL and the migrations are unreachable from outside.
+  backend:
+    internal: true
+  frontend: {}
+
+volumes:
+  pgdata: {}
+  # Filled by `indexer` on every `up`; mounted read-only into the API.
+  index: {}

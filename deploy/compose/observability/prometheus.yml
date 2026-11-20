@@ -1,0 +1,13 @@
+# Prometheus for the Compose observability profile. The API's /metrics is reachable
+# only on the internal `backend` network (nginx does not expose it).
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: rag-api
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["api:8000"]
+        labels:
+          service: rag-api
