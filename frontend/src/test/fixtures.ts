@@ -307,7 +307,7 @@ export const audit: Page<AuditEntry> = {
 
 export const version: VersionInfo = {
   build_version: '0.6.0',
-  contract_version: '1.3.0',
+  contract_version: '1.3.1',
   index_version: '6ce73ffaf982', // pragma: allowlist secret (fake hash)
   analysis_version: 2,
 };

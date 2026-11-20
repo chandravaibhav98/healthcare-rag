@@ -127,6 +127,10 @@ function QueryDrawer({ id, onClose }: { id: string | null; onClose: () => void }
   );
 }
 
+const SORTS = ['created_at', 'confidence', 'latency_ms'] as const satisfies readonly NonNullable<
+  QueriesParams['sort']
+>[];
+
 export function QueryExplorerPage() {
   usePageTitle('Query explorer');
   const [draft, setDraft] = useState<Filters>(EMPTY);
@@ -236,7 +240,10 @@ export function QueryExplorerPage() {
           className="w-40"
           value={sort}
           onChange={(e) => {
-            setSort(e.target.value);
+            // The API documents the sortable columns as an enum (Phase 7), so narrow the
+            // free-text <select> value to it rather than casting.
+            const value = SORTS.find((s) => s === e.target.value);
+            if (value) setSort(value);
           }}
         >
           <option value="created_at">Time</option>

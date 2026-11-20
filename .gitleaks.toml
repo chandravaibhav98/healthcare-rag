@@ -1,0 +1,10 @@
+# gitleaks configuration (scripts/security-scan.*, CI `security` job).
+# Starts from gitleaks' default rules; the only exception is listed below.
+title = "healthcare-rag"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "detect-secrets baseline: SHA-1 hashes of audited test values, not secrets"
+paths = ['''^\.secrets\.baseline$''']

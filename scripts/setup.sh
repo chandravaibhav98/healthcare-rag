@@ -7,7 +7,7 @@
 #   3. backend       uv sync --locked   (exact versions from backend/uv.lock)
 #   4. frontend      npm ci             (exact versions from frontend/package-lock.json)
 #   5. git hooks     pre-commit install (skipped with --ci / --skip-hooks)
-#   6. playwright    browsers (no-op until the e2e package exists, Phase 7)
+#   6. playwright    e2e/ dependencies + Chromium (system deps too with --ci)
 #   7. verify        scripts/lint.sh + scripts/test.sh (skip with --no-verify)
 #
 # Idempotent: safe to re-run at any time. Parity: scripts/setup.ps1.
@@ -74,10 +74,14 @@ fi
 log_step "6/7 Playwright browsers"
 if ((SKIP_PLAYWRIGHT)); then
   log_info "skipped (--skip-playwright)"
-elif [[ -f "$REPO_ROOT/e2e/package.json" ]]; then
-  run npm --prefix "$REPO_ROOT/e2e" exec -- playwright install --with-deps chromium
 else
-  log_info "no e2e package yet (Phase 7); nothing to install"
+  run npm ci --prefix "$E2E_DIR" --no-audit --no-fund
+  # --with-deps installs OS libraries via the package manager (sudo on Linux), so only
+  # CI asks for it; locally, CHROME_PATH can point at an existing Chrome instead.
+  PW_ARGS=(chromium)
+  ((CI_MODE)) && PW_ARGS=(--with-deps chromium)
+  run npm --prefix "$E2E_DIR" exec -- playwright install "${PW_ARGS[@]}"
+  log_ok "e2e/node_modules + Playwright Chromium installed"
 fi
 
 if ((VERIFY)); then

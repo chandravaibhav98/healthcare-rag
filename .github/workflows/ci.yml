@@ -1,8 +1,12 @@
-# CI (Phases 0-4): lint + typecheck + tests on every PR and on main, the SC1
-# determinism gate (byte-identical index on Linux and Windows) and the Phase 4
-# evaluation gate (no regression on the dev pool, no false validations).
-# Jobs call scripts/setup.*, the same entry point a developer uses, so "green on CI"
-# and "green on my machine" mean the same thing. Phase 10 extends this pipeline.
+# CI: lint + typecheck + tests on every PR and on main, the SC1 determinism gate
+# (byte-identical index on Linux and Windows), the Phase 4 evaluation gate and the
+# Phase 7 quality gates: coverage targets, Schemathesis contract fuzzing, Playwright E2E,
+# the k6 load test and security scanning.
+# Jobs call scripts/*, the same entry points a developer uses, so "green on CI" and
+# "green on my machine" mean the same thing. Phase 10 extends this pipeline.
+#
+# Third-party actions are pinned to a full commit SHA (tags can be force-pushed, as the
+# March 2026 trivy-action compromise showed); GitHub's own actions use major tags.
 name: ci
 
 on:
@@ -45,28 +49,156 @@ jobs:
       # Linux: the PostgreSQL variants of the persistence tests run in a Testcontainers
       # container (the runner has Docker). Windows runners cannot run Linux containers, so
       # they cover SQLite only; the code under test is identical.
+      # Browsers are installed by the e2e job only.
       - name: Setup + lint + test (bash)
         if: runner.os != 'Windows'
-        run: bash scripts/setup.sh --ci
+        run: bash scripts/setup.sh --ci --skip-playwright
 
       - name: Setup + lint + test (PowerShell)
         if: runner.os == 'Windows'
         shell: pwsh
         env:
           SKIP_POSTGRES_TESTS: "1"
-        run: ./scripts/setup.ps1 --ci
+        run: ./scripts/setup.ps1 --ci --skip-playwright
 
-      - name: Backend coverage (SQLite + PostgreSQL)
+      # Coverage gates (plan Phase 7): backend app/rag >= 90 %, app/services >= 85 %,
+      # overall >= 80 % (scripts/coverage_gate.py); frontend >= 70 % (vite.config.ts).
+      - name: Coverage gates (backend on SQLite + PostgreSQL, frontend)
         if: runner.os != 'Windows'
-        run: bash scripts/test.sh --backend --coverage --ci
+        run: bash scripts/test.sh --backend --frontend --coverage --ci
 
       - name: Upload coverage
         if: runner.os != 'Windows' && always()
         uses: actions/upload-artifact@v7
         with:
-          name: backend-coverage
-          path: backend/coverage.xml
+          name: coverage
+          path: |
+            backend/coverage.xml
+            backend/coverage.json
+            frontend/coverage/
           if-no-files-found: ignore
+
+  contract:
+    name: contract fuzzing (Schemathesis, 100 examples per operation)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
+        with:
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+      - run: uv sync --locked --directory backend
+      # Every operation in the committed openapi.json, positive and negative inputs, with
+      # Schemathesis' response checks (status codes, content types, schemas, auth).
+      - name: Schemathesis
+        env:
+          SCHEMATHESIS_MAX_EXAMPLES: "100"
+        run: uv run --directory backend pytest tests/contract -q
+
+  e2e:
+    name: Playwright E2E (Chromium)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
+        with:
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: |
+            frontend/package-lock.json
+            e2e/package-lock.json
+      # --ci installs Chromium with its system libraries; lint and tests run in `quality`.
+      - name: Setup (dependencies + Chromium)
+        run: bash scripts/setup.sh --ci --no-verify
+      - name: Functional E2E
+        run: bash scripts/test.sh --e2e --ci
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: playwright-report
+          path: |
+            e2e/playwright-report/
+            e2e/test-results/
+          if-no-files-found: ignore
+
+  load:
+    name: k6 load test (/qa, p95 < 300 ms, 0 % 5xx)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
+        with:
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+      - run: uv sync --locked --directory backend
+      - uses: grafana/setup-k6-action@c47136d33d365efbeb9ae7266908b5dcf98cdece # v1.3.0
+        with:
+          k6-version: "2.4.0"
+      # Pull requests get a one-minute run at full concurrency; main and manual runs get
+      # the full plan gate (50 virtual users for 5 minutes).
+      - name: Load test
+        env:
+          DURATION: ${{ github.event_name == 'pull_request' && '1m' || '5m' }}
+        run: bash scripts/load-test.sh --vus 50 --duration "$DURATION" --ci
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: load-test
+          path: |
+            artifacts/load/summary.json
+            artifacts/load-server.log
+          if-no-files-found: ignore
+
+  security:
+    name: security scan (pip-audit, npm audit, bandit, gitleaks, trivy)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # gitleaks scans the whole history
+      - uses: astral-sh/setup-uv@v10
+        with:
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: |
+            frontend/package-lock.json
+            e2e/package-lock.json
+      - run: uv sync --locked --directory backend
+      - run: npm ci --prefix frontend --no-audit --no-fund && npm ci --prefix e2e --no-audit --no-fund
+      # gitleaks and trivy as release binaries, each checked against a SHA-256 recorded
+      # here (no third-party action, no mutable tag). Trivy 0.69.4-0.69.6 were the
+      # releases poisoned in March 2026 (CVE-2026-33634); 0.76.2 is a later, clean release.
+      - name: Install gitleaks + trivy (checksum-verified)
+        env:
+          GITLEAKS_VERSION: 8.30.1
+          GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb # pragma: allowlist secret (SHA-256, not a secret)
+          TRIVY_VERSION: 0.76.2
+          TRIVY_SHA256: bc0fc726e017b8927a62b2d3531d7a84ee01769daf5c99ed866dced54089fdbf # pragma: allowlist secret (SHA-256, not a secret)
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/bin" && cd "$RUNNER_TEMP"
+          curl -fsSLo gitleaks.tgz "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          echo "${GITLEAKS_SHA256}  gitleaks.tgz" | sha256sum -c -
+          curl -fsSLo trivy.tgz "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz"
+          echo "${TRIVY_SHA256}  trivy.tgz" | sha256sum -c -
+          tar -xzf gitleaks.tgz -C bin gitleaks
+          tar -xzf trivy.tgz -C bin trivy
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+      # --strict fails the job if any scanner cannot run.
+      - name: Security scan
+        run: bash scripts/security-scan.sh --strict --ci
 
   determinism:
     name: index determinism (${{ matrix.os }})

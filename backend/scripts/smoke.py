@@ -28,6 +28,9 @@ UNANSWERABLE = "Who won the football world cup?"
 
 
 def call(base: str, method: str, path: str, body: dict[str, Any] | None = None) -> tuple[int, Any]:
+    # urlopen also accepts file:// and custom schemes; only HTTP(S) is a valid API URL.
+    if not base.startswith(("http://", "https://")):
+        raise SystemExit(f"--base-url must be an http(s) URL, got {base!r}")
     data = json.dumps(body).encode() if body is not None else None
     req = urllib.request.Request(  # noqa: S310  (URL comes from the operator's CLI flag)
         base.rstrip("/") + path,
@@ -36,7 +39,7 @@ def call(base: str, method: str, path: str, body: dict[str, Any] | None = None) 
         headers={"Content-Type": "application/json", "X-Request-ID": "smoke-test"},
     )
     try:
-        with urllib.request.urlopen(req, timeout=10) as resp:  # noqa: S310
+        with urllib.request.urlopen(req, timeout=10) as resp:  # noqa: S310  # nosec B310
             return resp.status, json.loads(resp.read() or b"null")
     except urllib.error.HTTPError as err:
         return err.code, json.loads(err.read() or b"null")

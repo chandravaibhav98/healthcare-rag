@@ -15,7 +15,9 @@ from app.repositories.paging import PageRequest
 from app.services.eval_service import EvalAlreadyRunningError, EvalService
 
 router = APIRouter(prefix=PREFIX, tags=["admin"])
-RunPage = Annotated[PageRequest, Depends(page_params(run_repo.SORTABLE, "created_at"))]
+RunPage = Annotated[
+    PageRequest, Depends(page_params(run_repo.SORTABLE, "created_at", name="EvalRunSort"))
+]
 
 
 @router.get(

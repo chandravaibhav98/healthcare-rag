@@ -12,6 +12,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 from app.api.deps import (
+    OPTIONAL_AUTH,
     ActorDep,
     OptionalUserDep,
     SessionDep,
@@ -35,6 +36,7 @@ router = APIRouter(tags=["qa"])
     summary="Ask for human review of an answer",
     responses=problem_responses(404, 422, 429, 503),
     dependencies=[Depends(enforce_qa_rate_limit)],
+    openapi_extra=OPTIONAL_AUTH,
 )
 async def escalate(
     body: EscalationRequest,

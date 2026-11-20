@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 
@@ -58,7 +58,14 @@ function Evidence({ detail }: { detail: QueryDetail }) {
               </span>
             </p>
             <p className="text-xs text-muted-foreground">{str(c.chunk_id)}</p>
-            <p className="mt-2 max-h-40 overflow-y-auto whitespace-pre-wrap leading-relaxed">
+            {/* A scroll container must be keyboard-reachable (WCAG 2.1.1; axe
+                scrollable-region-focusable, found by the Phase 7 a11y gate). */}
+            <div
+              tabIndex={0}
+              role="region"
+              aria-label={`Text of source ${id}`}
+              className="mt-2 max-h-40 overflow-y-auto whitespace-pre-wrap rounded-sm leading-relaxed focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            >
               {check.segments.map((s, i) =>
                 s.match ? (
                   <mark key={i} className="rounded bg-highlight px-0.5 text-foreground">
@@ -68,7 +75,7 @@ function Evidence({ detail }: { detail: QueryDetail }) {
                   <span key={i}>{s.text}</span>
                 ),
               )}
-            </p>
+            </div>
           </li>
         );
       })}
@@ -76,31 +83,35 @@ function Evidence({ detail }: { detail: QueryDetail }) {
   );
 }
 
-function ReviewForm({ detail, onDone }: { detail: QueryDetail; onDone: () => void }) {
-  const submit = useSubmitReview();
+function ReviewForm({
+  detail,
+  submit,
+  onDone,
+}: {
+  detail: QueryDetail;
+  submit: ReturnType<typeof useSubmitReview>;
+  onDone: () => void;
+}) {
   const chunkIds = detail.citations.map((c) => str(c.chunk_id));
+  // The form is keyed by the item id (see the page), so its defaults are computed once per
+  // item at mount. Resetting from an effect instead raced user input whenever the detail
+  // query swapped from the previous item's placeholder data (found by the E2E suite).
   const {
     register,
     handleSubmit,
     control,
-    reset,
     formState: { errors },
   } = useForm<ReviewValues>({
     resolver: zodResolver(reviewSchema),
-    defaultValues: { verdict: 'approve', note: '', corrected: [], extra: '', promote: false },
-  });
-  const verdict = useWatch({ control, name: 'verdict' });
-
-  useEffect(() => {
-    reset({
+    defaultValues: {
       verdict: detail.review?.verdict ?? (detail.status === 'validated' ? 'approve' : 'correct'),
       note: detail.review?.note ?? '',
       corrected: detail.review?.corrected_citations.filter((id) => chunkIds.includes(id)) ?? [],
       extra: '',
       promote: detail.review?.promote_to_gold ?? false,
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- reset when the item changes
-  }, [detail.id]);
+    },
+  });
+  const verdict = useWatch({ control, name: 'verdict' });
 
   const onSubmit = handleSubmit((values) => {
     const corrected = [...values.corrected, ...values.extra.split(/[\s,]+/).filter(Boolean)];
@@ -191,6 +202,10 @@ export function ReviewQueuePage() {
   const [selected, setSelected] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const queue = useReviewQueue(params);
+  // Owned by the page, not the form: saving moves the queue to the next item, which
+  // unmounts the form, and a mutation's per-call callbacks only run while its observer
+  // is mounted (found by the Phase 7 E2E suite).
+  const submit = useSubmitReview();
 
   const items: ReviewQueueItem[] = queue.data?.items ?? [];
   // The selection follows the list: if the chosen item left the queue, show the first one.
@@ -317,7 +332,9 @@ export function ReviewQueuePage() {
                       </Alert>
                     ) : null}
                     <ReviewForm
+                      key={detail.data.id}
                       detail={detail.data}
+                      submit={submit}
                       onDone={() => {
                         setSaved(true);
                       }}

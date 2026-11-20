@@ -13,6 +13,7 @@ from typing import Annotated, Final
 from fastapi import APIRouter, Body, Cookie, Depends, HTTPException, Response, status
 
 from app.api.deps import (
+    OPTIONAL_AUTH,
     ActorDep,
     AuthServiceDep,
     CurrentUserDep,
@@ -58,6 +59,7 @@ def _token_response(tokens: IssuedTokens) -> TokenResponse:
     "/login",
     response_model=TokenResponse,
     operation_id="login",
+    openapi_extra=OPTIONAL_AUTH,
     summary="Exchange email and password for tokens",
     responses=problem_responses(401, 422, 429, 503),
     dependencies=[Depends(enforce_login_rate_limit)],
@@ -82,6 +84,7 @@ async def login(
     "/refresh",
     response_model=TokenResponse,
     operation_id="refresh_tokens",
+    openapi_extra=OPTIONAL_AUTH,
     summary="Rotate the refresh token and issue a new access token",
     description="Reads the refresh token from the cookie or the body. Each refresh token "
     "works once; presenting a used one revokes the whole session (theft signal).",
@@ -112,8 +115,9 @@ async def refresh(
     "/logout",
     status_code=status.HTTP_204_NO_CONTENT,
     operation_id="logout",
+    openapi_extra=OPTIONAL_AUTH,
     summary="Revoke the current session (refresh-token family)",
-    responses=problem_responses(503),
+    responses=problem_responses(422, 503),
 )
 async def logout(
     response: Response,

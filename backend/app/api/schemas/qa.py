@@ -19,9 +19,10 @@ from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_vali
 
 from app.domain.ids import CHUNK_ID_PATTERN, DOC_ID_PATTERN, INDEX_VERSION_PATTERN
 
-CONTRACT_VERSION: Final = (
-    "1.3.0"  # 1.3: additive escalations, stats histogram, escalation fields (Phase 6)
-)
+# 1.3: additive escalations, stats histogram, escalation fields (Phase 6).
+# 1.3.1: documentation precision found by Schemathesis (Phase 7): optional auth declared,
+# list `sort` as enums, `offset` <= 1,000,000, documented 400 and media types.
+CONTRACT_VERSION: Final = "1.3.1"
 
 #: Fixed answer text when abstaining (ADR-0007). Clients may rely on it verbatim.
 ABSTENTION_MESSAGE: Final = (

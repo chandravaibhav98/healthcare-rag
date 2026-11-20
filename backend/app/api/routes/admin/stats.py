@@ -26,7 +26,10 @@ def resolve_window(since: datetime | None, until: datetime | None) -> tuple[date
                 "from/to must include a timezone (e.g. 2026-11-01T00:00:00Z)",
             )
     end = until or utcnow()
-    start = since or end - DEFAULT_WINDOW
+    try:
+        start = since or end - DEFAULT_WINDOW
+    except OverflowError as exc:  # e.g. to=0001-01-01 (found by Schemathesis, Phase 7)
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "'to' is out of range") from exc
     if start >= end:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "'from' must be before 'to'")
     if end - start > MAX_WINDOW:

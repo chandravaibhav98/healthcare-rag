@@ -23,6 +23,7 @@ $script:C = if ($useColor) {
 function Get-RepoRoot { $script:RepoRoot }
 function Get-BackendDir { Join-Path $script:RepoRoot 'backend' }
 function Get-FrontendDir { Join-Path $script:RepoRoot 'frontend' }
+function Get-E2eDir { Join-Path $script:RepoRoot 'e2e' }
 
 function Write-Step([string]$Message) { Write-Host ''; Write-Host "$($C.Blue)==>$($C.Off) $($C.Bold)$Message$($C.Off)" }
 function Write-Info([string]$Message) { Write-Host "    $Message" }
@@ -61,6 +62,12 @@ function Invoke-Step {
     try { $ok = Invoke-Native -Command $Command -Arguments $Arguments }
     catch { Write-Err $_.Exception.Message }
     if ($ok) { Write-Ok $Label } else { Write-Err $Label; $script:StepFailures.Add($Label) }
+}
+
+# Add-StepFailure: record a failure that is not a command (parity with STEP_FAILURES+=(...)).
+function Add-StepFailure([string]$Label) {
+    Write-Err $Label
+    $script:StepFailures.Add($Label)
 }
 
 function Complete-Steps([string]$Name) {

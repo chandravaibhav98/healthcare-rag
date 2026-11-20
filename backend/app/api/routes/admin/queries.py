@@ -29,7 +29,16 @@ from app.repositories.paging import PageRequest
 from app.services import admin_service
 
 router = APIRouter(prefix=PREFIX, tags=["admin"])
-QueryPage = Annotated[PageRequest, Depends(page_params(query_repo.SORTABLE, "created_at"))]
+NDJSON = "application/x-ndjson"
+
+
+class NDJSONResponse(PlainTextResponse):
+    media_type = NDJSON
+
+
+QueryPage = Annotated[
+    PageRequest, Depends(page_params(query_repo.SORTABLE, "created_at", name="QuerySort"))
+]
 
 
 def summary(row: QueryLog) -> QuerySummary:
@@ -185,18 +194,17 @@ async def review_query(
 
 @router.get(
     "/reviews/export/gold.jsonl",
-    response_class=PlainTextResponse,
+    response_class=NDJSONResponse,
     operation_id="admin_export_gold_candidates",
     summary="Promoted reviews as gold dev-set candidates (JSONL)",
     description="One JSON object per line in the `gold_source.yaml` item format, plus a "
     "`source` block for traceability. Candidates need an annotator pass before they "
     "join the gold set (DATASET_CARD.md).",
-    responses={**responses(), 200: {"content": {"application/x-ndjson": {}}}},
+    responses={**responses(), 200: {"content": {NDJSON: {"schema": {"type": "string"}}}}},
 )
-async def export_gold(_: ReviewerDep, session: SessionDep) -> PlainTextResponse:
+async def export_gold(_: ReviewerDep, session: SessionDep) -> NDJSONResponse:
     body = await admin_service.export_gold_jsonl(session)
-    return PlainTextResponse(
+    return NDJSONResponse(
         body,
-        media_type="application/x-ndjson",
         headers={"Content-Disposition": 'attachment; filename="gold_candidates.jsonl"'},
     )

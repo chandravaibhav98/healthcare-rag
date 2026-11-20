@@ -28,14 +28,17 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "bandit==1.9.4",  # Phase 7: security lint (also via ruff "S"; bandit is the reference)
     "detect-secrets==1.5.0",
     "httpx2==2.16.0",  # TestClient transport (starlette deprecates httpx)
     "hypothesis==6.170.15",  # property-based tests (validation maths)
     "mypy==2.4.1",
+    "pip-audit==2.10.1",  # Phase 7: known-vulnerability scan of the locked dependencies
     "pre-commit==4.7.0",
     "pytest==9.2.0",
     "pytest-cov==7.1.0",
     "ruff==0.17.4",
+    "schemathesis==4.30.1",  # Phase 7: property-based contract fuzzing of openapi.json
     "testcontainers[postgres]==4.15.0",  # Phase 5: real PostgreSQL in integration tests
     "types-pyyaml==6.0.12.20261103",
 ]

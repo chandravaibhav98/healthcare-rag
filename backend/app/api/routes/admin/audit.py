@@ -14,7 +14,9 @@ from app.repositories import audit as audit_repo
 from app.repositories.paging import PageRequest
 
 router = APIRouter(prefix=PREFIX, tags=["admin"])
-AuditPage = Annotated[PageRequest, Depends(page_params(audit_repo.SORTABLE, "created_at"))]
+AuditPage = Annotated[
+    PageRequest, Depends(page_params(audit_repo.SORTABLE, "created_at", name="AuditSort"))
+]
 
 
 @router.get(

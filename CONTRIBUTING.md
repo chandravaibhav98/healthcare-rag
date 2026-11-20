@@ -45,7 +45,9 @@ identical flags). CI calls the same scripts, so "green locally" means "green in 
 | --- | --- |
 | First-time setup (idempotent) | `scripts/setup.sh` · `pwsh scripts/setup.ps1` |
 | Lint + typecheck (+ `--fix`) | `scripts/lint.sh` · `pwsh scripts/lint.ps1` |
-| Tests (`--backend`, `--frontend`, `--coverage`) | `scripts/test.sh` · `pwsh scripts/test.ps1` |
+| Tests (`--backend`, `--frontend`, `--e2e`, `--all`, `--coverage`) | `scripts/test.sh` · `pwsh scripts/test.ps1` |
+| Load test (`--vus`, `--duration`, `--target`) | `scripts/load-test.sh` · `pwsh scripts/load-test.ps1` |
+| Security scan (`--strict`, `--only`) | `scripts/security-scan.sh` · `pwsh scripts/security-scan.ps1` |
 | Environment check | `scripts/preflight.sh` · `pwsh scripts/preflight.ps1` |
 | Run API + web locally | `scripts/dev.sh` · `pwsh scripts/dev.ps1` |
 | Smoke-test a running API (+ `--bench N`) | `scripts/smoke.sh` · `pwsh scripts/smoke.ps1` |
@@ -63,6 +65,12 @@ return non-zero on failure. Shared helpers live in `scripts/lib/`.
 - Hygiene: trailing whitespace, final newline, LF line endings, case conflicts, large
   files, private keys, `detect-secrets` (baseline: `.secrets.baseline`).
 - Hooks never rewrite `corpus/`: its bytes define `index_version` (SC1).
+- CI-only gates (Phase 7, ADR-0013): coverage (`app/rag` ≥ 90 %, `app/services` ≥ 85 %,
+  backend ≥ 80 %, frontend ≥ 70 %), Schemathesis contract fuzzing, the evaluation
+  regression tests, Playwright E2E + axe, the k6 load test and the security scan. Each
+  one is a script you can run locally first.
+- New third-party GitHub Actions are pinned to a full commit SHA with the version in a
+  comment; downloaded tools are checked against a recorded SHA-256.
 
 ## Contracts
 

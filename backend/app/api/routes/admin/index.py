@@ -7,6 +7,7 @@ from typing import Annotated, Literal
 from fastapi import APIRouter, HTTPException, Path, Query, Request, status
 
 from app.api.deps import (
+    MAX_OFFSET,
     ActorDep,
     AdminDep,
     DbDep,
@@ -61,7 +62,7 @@ async def list_versions(
     request: Request,
     session: SessionDep,
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
-    offset: Annotated[int, Query(ge=0)] = 0,
+    offset: Annotated[int, Query(ge=0, le=MAX_OFFSET)] = 0,
 ) -> Page[IndexVersionOut]:
     service: IndexService = state(request, "index_service")
     rows = sorted(
@@ -155,7 +156,7 @@ async def list_documents(
     sort: Literal["doc_id", "chunk_count", "effective_date", "source_org"] = "doc_id",
     order: Literal["asc", "desc"] = "asc",
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
-    offset: Annotated[int, Query(ge=0)] = 0,
+    offset: Annotated[int, Query(ge=0, le=MAX_OFFSET)] = 0,
 ) -> Page[DocumentOut]:
     docs = admin_service.documents(registry.current().index)
     if source_org:

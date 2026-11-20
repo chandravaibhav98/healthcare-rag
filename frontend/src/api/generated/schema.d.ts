@@ -472,6 +472,11 @@ export interface components {
             /** Ip */
             ip: string | null;
         };
+        /**
+         * AuditSort
+         * @enum {string}
+         */
+        AuditSort: "created_at";
         /** Citation */
         Citation: {
             /**
@@ -713,6 +718,11 @@ export interface components {
             error: string | null;
         };
         /**
+         * EvalRunSort
+         * @enum {string}
+         */
+        EvalRunSort: "created_at";
+        /**
          * FieldError
          * @description One request-validation failure. The rejected input is deliberately NOT echoed
          *     back, because a question may contain patient information (ADR-0009).
@@ -733,11 +743,6 @@ export interface components {
              * @description Machine-readable error type, e.g. 'less_than_equal'.
              */
             type: string;
-        };
-        /** HTTPValidationError */
-        HTTPValidationError: {
-            /** Detail */
-            detail?: components["schemas"]["ValidationError"][];
         };
         /** IndexVersionOut */
         IndexVersionOut: {
@@ -1076,6 +1081,11 @@ export interface components {
             escalation_note: string | null;
             review: components["schemas"]["ReviewOut"] | null;
         };
+        /**
+         * QuerySort
+         * @enum {string}
+         */
+        QuerySort: "confidence" | "created_at" | "latency_ms";
         /** QuerySummary */
         QuerySummary: {
             /**
@@ -1386,19 +1396,6 @@ export interface components {
             /** Last Login At */
             last_login_at: string | null;
         };
-        /** ValidationError */
-        ValidationError: {
-            /** Location */
-            loc: (string | number)[];
-            /** Message */
-            msg: string;
-            /** Error Type */
-            type: string;
-            /** Input */
-            input?: unknown;
-            /** Context */
-            ctx?: Record<string, never>;
-        };
         /** VersionInfo */
         VersionInfo: {
             /**
@@ -1460,6 +1457,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["QAResponse"];
+                };
+            };
+            /** @description Bad Request (body is not valid JSON) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
                 };
             };
             /** @description Unauthorized */
@@ -1531,6 +1537,15 @@ export interface operations {
                     "application/json": components["schemas"]["QAResponse"];
                 };
             };
+            /** @description Bad Request (body is not valid JSON) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
             /** @description Unauthorized */
             401: {
                 headers: {
@@ -1600,6 +1615,15 @@ export interface operations {
                     "application/json": components["schemas"]["EscalationResponse"];
                 };
             };
+            /** @description Bad Request (body is not valid JSON) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
             /** @description Not Found */
             404: {
                 headers: {
@@ -1658,6 +1682,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TokenResponse"];
+                };
+            };
+            /** @description Bad Request (body is not valid JSON) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
                 };
             };
             /** @description Unauthorized */
@@ -1722,6 +1755,15 @@ export interface operations {
                     "application/json": components["schemas"]["TokenResponse"];
                 };
             };
+            /** @description Bad Request (body is not valid JSON) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
             /** @description Unauthorized */
             401: {
                 headers: {
@@ -1773,13 +1815,22 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Validation Error */
+            /** @description Bad Request (body is not valid JSON) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unprocessable Entity */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
                 };
             };
             /** @description Service Unavailable */
@@ -1906,8 +1957,8 @@ export interface operations {
                 escalated?: boolean | null;
                 limit?: number;
                 offset?: number;
-                /** @description One of: confidence, created_at, latency_ms. */
-                sort?: string;
+                /** @description Column to sort by. */
+                sort?: components["schemas"]["QuerySort"];
                 order?: "asc" | "desc";
             };
             header?: never;
@@ -2038,8 +2089,8 @@ export interface operations {
                 promoted?: boolean | null;
                 limit?: number;
                 offset?: number;
-                /** @description One of: confidence, created_at, latency_ms. */
-                sort?: string;
+                /** @description Column to sort by. */
+                sort?: components["schemas"]["QuerySort"];
                 order?: "asc" | "desc";
             };
             header?: never;
@@ -2128,6 +2179,15 @@ export interface operations {
                     "application/json": components["schemas"]["ReviewOut"];
                 };
             };
+            /** @description Bad Request (body is not valid JSON) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
             /** @description Unauthorized */
             401: {
                 headers: {
@@ -2190,8 +2250,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "text/plain": string;
-                    "application/x-ndjson": unknown;
+                    "application/x-ndjson": string;
                 };
             };
             /** @description Unauthorized */
@@ -2200,7 +2259,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
                 };
             };
             /** @description Forbidden */
@@ -2209,7 +2268,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
                 };
             };
             /** @description Service Unavailable */
@@ -2218,7 +2277,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "text/plain": components["schemas"]["ProblemDetails"];
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
                 };
             };
         };
@@ -2229,8 +2288,8 @@ export interface operations {
                 status?: ("queued" | "running" | "succeeded" | "failed") | null;
                 limit?: number;
                 offset?: number;
-                /** @description One of: created_at. */
-                sort?: string;
+                /** @description Column to sort by. */
+                sort?: components["schemas"]["EvalRunSort"];
                 order?: "asc" | "desc";
             };
             header?: never;
@@ -2782,6 +2841,15 @@ export interface operations {
                     "application/json": components["schemas"]["ConfigOut"];
                 };
             };
+            /** @description Bad Request (body is not valid JSON) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
             /** @description Unauthorized */
             401: {
                 headers: {
@@ -2839,8 +2907,8 @@ export interface operations {
                 to?: string | null;
                 limit?: number;
                 offset?: number;
-                /** @description One of: created_at. */
-                sort?: string;
+                /** @description Column to sort by. */
+                sort?: components["schemas"]["AuditSort"];
                 order?: "asc" | "desc";
             };
             header?: never;

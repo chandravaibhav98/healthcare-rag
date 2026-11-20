@@ -3,7 +3,7 @@
   "info": {
     "title": "Healthcare Guidelines RAG Assistant",
     "description": "Citation-first, evidence-validated question answering over guideline documents.\n\n> ⚠️ All guideline content is **synthetic**. Not for clinical use.",
-    "version": "1.3.0"
+    "version": "1.3.1"
   },
   "paths": {
     "/api/v1/qa": {
@@ -84,9 +84,20 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Bad Request (body is not valid JSON)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
           }
         },
         "security": [
+          {},
           {
             "bearerAuth": []
           }
@@ -171,9 +182,20 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Bad Request (body is not valid JSON)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
           }
         },
         "security": [
+          {},
           {
             "bearerAuth": []
           }
@@ -247,9 +269,20 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Bad Request (body is not valid JSON)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
           }
         },
         "security": [
+          {},
           {
             "bearerAuth": []
           }
@@ -323,9 +356,20 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Bad Request (body is not valid JSON)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
           }
         },
         "security": [
+          {},
           {
             "bearerAuth": []
           }
@@ -341,6 +385,7 @@
         "description": "Reads the refresh token from the cookie or the body. Each refresh token works once; presenting a used one revokes the whole session (theft signal).",
         "operationId": "refresh_tokens",
         "security": [
+          {},
           {
             "bearerAuth": []
           }
@@ -420,6 +465,16 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Bad Request (body is not valid JSON)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
           }
         }
       }
@@ -432,6 +487,7 @@
         "summary": "Revoke the current session (refresh-token family)",
         "operationId": "logout",
         "security": [
+          {},
           {
             "bearerAuth": []
           }
@@ -475,6 +531,16 @@
           "204": {
             "description": "Successful Response"
           },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
           "503": {
             "description": "Service Unavailable",
             "content": {
@@ -485,12 +551,12 @@
               }
             }
           },
-          "422": {
-            "description": "Validation Error",
+          "400": {
+            "description": "Bad Request (body is not valid JSON)",
             "content": {
-              "application/json": {
+              "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             }
@@ -850,6 +916,7 @@
             "required": false,
             "schema": {
               "type": "integer",
+              "maximum": 1000000,
               "minimum": 0,
               "default": 0,
               "title": "Offset"
@@ -860,12 +927,11 @@
             "in": "query",
             "required": false,
             "schema": {
-              "type": "string",
-              "description": "One of: confidence, created_at, latency_ms.",
-              "default": "created_at",
-              "title": "Sort"
+              "$ref": "#/components/schemas/QuerySort",
+              "description": "Column to sort by.",
+              "default": "created_at"
             },
-            "description": "One of: confidence, created_at, latency_ms."
+            "description": "Column to sort by."
           },
           {
             "name": "order",
@@ -1108,6 +1174,7 @@
             "required": false,
             "schema": {
               "type": "integer",
+              "maximum": 1000000,
               "minimum": 0,
               "default": 0,
               "title": "Offset"
@@ -1118,12 +1185,11 @@
             "in": "query",
             "required": false,
             "schema": {
-              "type": "string",
-              "description": "One of: confidence, created_at, latency_ms.",
-              "default": "created_at",
-              "title": "Sort"
+              "$ref": "#/components/schemas/QuerySort",
+              "description": "Column to sort by.",
+              "default": "created_at"
             },
-            "description": "One of: confidence, created_at, latency_ms."
+            "description": "Column to sort by."
           },
           {
             "name": "order",
@@ -1298,6 +1364,16 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Bad Request (body is not valid JSON)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
           }
         }
       }
@@ -1314,18 +1390,17 @@
           "200": {
             "description": "Successful Response",
             "content": {
-              "text/plain": {
+              "application/x-ndjson": {
                 "schema": {
                   "type": "string"
                 }
-              },
-              "application/x-ndjson": {}
+              }
             }
           },
           "401": {
             "description": "Unauthorized",
             "content": {
-              "text/plain": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ProblemDetails"
                 }
@@ -1335,7 +1410,7 @@
           "403": {
             "description": "Forbidden",
             "content": {
-              "text/plain": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ProblemDetails"
                 }
@@ -1345,7 +1420,7 @@
           "503": {
             "description": "Service Unavailable",
             "content": {
-              "text/plain": {
+              "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ProblemDetails"
                 }
@@ -1413,6 +1488,7 @@
             "required": false,
             "schema": {
               "type": "integer",
+              "maximum": 1000000,
               "minimum": 0,
               "default": 0,
               "title": "Offset"
@@ -1423,12 +1499,11 @@
             "in": "query",
             "required": false,
             "schema": {
-              "type": "string",
-              "description": "One of: created_at.",
-              "default": "created_at",
-              "title": "Sort"
+              "$ref": "#/components/schemas/EvalRunSort",
+              "description": "Column to sort by.",
+              "default": "created_at"
             },
-            "description": "One of: created_at."
+            "description": "Column to sort by."
           },
           {
             "name": "order",
@@ -1683,6 +1758,7 @@
             "required": false,
             "schema": {
               "type": "integer",
+              "maximum": 1000000,
               "minimum": 0,
               "default": 0,
               "title": "Offset"
@@ -2094,6 +2170,7 @@
             "required": false,
             "schema": {
               "type": "integer",
+              "maximum": 1000000,
               "minimum": 0,
               "default": 0,
               "title": "Offset"
@@ -2285,6 +2362,16 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Bad Request (body is not valid JSON)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -2394,6 +2481,7 @@
             "required": false,
             "schema": {
               "type": "integer",
+              "maximum": 1000000,
               "minimum": 0,
               "default": 0,
               "title": "Offset"
@@ -2404,12 +2492,11 @@
             "in": "query",
             "required": false,
             "schema": {
-              "type": "string",
-              "description": "One of: created_at.",
-              "default": "created_at",
-              "title": "Sort"
+              "$ref": "#/components/schemas/AuditSort",
+              "description": "Column to sort by.",
+              "default": "created_at"
             },
-            "description": "One of: created_at."
+            "description": "Column to sort by."
           },
           {
             "name": "order",
@@ -2669,6 +2756,13 @@
           "ip"
         ],
         "title": "AuditOut"
+      },
+      "AuditSort": {
+        "type": "string",
+        "enum": [
+          "created_at"
+        ],
+        "title": "AuditSort"
       },
       "Citation": {
         "properties": {
@@ -3289,6 +3383,13 @@
         ],
         "title": "EvalRunOut"
       },
+      "EvalRunSort": {
+        "type": "string",
+        "enum": [
+          "created_at"
+        ],
+        "title": "EvalRunSort"
+      },
       "FieldError": {
         "properties": {
           "loc": {
@@ -3326,19 +3427,6 @@
         ],
         "title": "FieldError",
         "description": "One request-validation failure. The rejected input is deliberately NOT echoed\nback, because a question may contain patient information (ADR-0009)."
-      },
-      "HTTPValidationError": {
-        "properties": {
-          "detail": {
-            "items": {
-              "$ref": "#/components/schemas/ValidationError"
-            },
-            "type": "array",
-            "title": "Detail"
-          }
-        },
-        "type": "object",
-        "title": "HTTPValidationError"
       },
       "IndexVersionOut": {
         "properties": {
@@ -4042,6 +4130,15 @@
           "review"
         ],
         "title": "QueryDetail"
+      },
+      "QuerySort": {
+        "type": "string",
+        "enum": [
+          "confidence",
+          "created_at",
+          "latency_ms"
+        ],
+        "title": "QuerySort"
       },
       "QuerySummary": {
         "properties": {
@@ -4762,46 +4859,6 @@
           "last_login_at"
         ],
         "title": "UserOut"
-      },
-      "ValidationError": {
-        "properties": {
-          "loc": {
-            "items": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "integer"
-                }
-              ]
-            },
-            "type": "array",
-            "title": "Location"
-          },
-          "msg": {
-            "type": "string",
-            "title": "Message"
-          },
-          "type": {
-            "type": "string",
-            "title": "Error Type"
-          },
-          "input": {
-            "title": "Input"
-          },
-          "ctx": {
-            "type": "object",
-            "title": "Context"
-          }
-        },
-        "type": "object",
-        "required": [
-          "loc",
-          "msg",
-          "type"
-        ],
-        "title": "ValidationError"
       },
       "VersionInfo": {
         "properties": {

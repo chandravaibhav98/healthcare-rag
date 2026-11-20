@@ -20,8 +20,9 @@ replaced by an organisation's secure guideline repository.
 | Phase 3: validation engine and `/qa` API | ✅ Live `/qa`, abstention, probes, metrics; p95 ≈ 11 ms over HTTP ([report](docs/project/phase-3-report.md)) |
 | Phase 4: evaluation and threshold tuning | ✅ Harness + CI gate. Held-out: SC3 met (0.807); SC2 P@5 0.417 vs ceiling 0.583 (decision pending); 2/12 false validations ([report](docs/project/phase-4-report.md), [evaluation](docs/evaluation-report.md)) |
 | Phase 5: persistence, auth and admin APIs | ✅ SQLite/PostgreSQL, JWT + RBAC, 17 admin routes, audited runtime tuning, PHI redaction + retention ([report](docs/project/phase-5-report.md)) |
-| **Phase 6: React assistant and admin dashboard** | ✅ Assistant with evidence view and escalation, 7-section dashboard; Lighthouse a11y 100 on every route, axe clean in light and dark ([report](docs/project/phase-6-report.md)) |
-| Phase 7: test hardening and quality gates | ⏭️ Next |
+| Phase 6: React assistant and admin dashboard | ✅ Assistant with evidence view and escalation, 7-section dashboard; Lighthouse a11y 100 on every route, axe clean in light and dark ([report](docs/project/phase-6-report.md)) |
+| **Phase 7: test hardening and quality gates** | ✅ Coverage gates (backend 93 %, frontend 92 % lines), Schemathesis on every operation, 20 Playwright journeys + axe gate, k6 50 VUs × 5 min p95 179 ms / 0 % 5xx, security scans ([report](docs/project/phase-7-report.md)) |
+| Phase 8: containerization | ⏭️ Next |
 
 ## Quick start
 
@@ -106,6 +107,9 @@ Since 1.2 and 1.3 (all additive):
 - **Escalation** (1.3) `POST /api/v1/escalations` `{request_id, note}`: a user asks a
   reviewer to check an answer; it joins the review queue. `stats` gained a confidence
   histogram.
+- **1.3.1** (Phase 7, from contract fuzzing): optional authentication is declared in the
+  OpenAPI document, list `sort` parameters are enums, `offset` is capped at 1,000,000,
+  and malformed JSON (400) and every error media type are documented.
 
 ## Repository layout
 
@@ -114,7 +118,7 @@ Since 1.2 and 1.3 (all additive):
 | `backend/` | FastAPI app, RAG library, evaluation, tests ([README](backend/README.md)) |
 | `frontend/` | React + TypeScript + Vite SPA |
 | `corpus/` | 72 synthetic guideline documents ([corpus card](corpus/CORPUS_CARD.md)) |
-| `e2e/` | Playwright E2E and demo (Phases 7 and 11) |
+| `e2e/` | Playwright E2E + accessibility gate, k6 load test, Phase 6 audit, demo (Phase 11) ([README](e2e/README.md)) |
 | `deploy/` | Docker, Compose, Kubernetes (Phases 8 and 9) |
 | `scripts/` | Ops scripts, `.sh` + `.ps1` pairs ([CONTRIBUTING](CONTRIBUTING.md)) |
 | `docs/` | ADRs, project docs, spikes |
@@ -126,7 +130,9 @@ Since 1.2 and 1.3 (all additive):
 | `preflight` | Read-only toolchain and repository hygiene check |
 | `setup` | Clean machine → lint and tests green (`--ci`, `--skip-hooks`, `--no-verify`) |
 | `lint` | ruff, mypy, contract snapshots, eslint, prettier, tsc (`--fix`) |
-| `test` | pytest and vitest (`--backend`, `--frontend`, `--coverage`) |
+| `test` | pytest, vitest, Playwright (`--backend`, `--frontend`, `--e2e`, `--all`); `--coverage` enforces the coverage gates |
+| `load-test` | k6 against `/qa`: 50 VUs × 5 min, p95 < 300 ms, 0 % 5xx (`--vus`, `--duration`, `--target`) |
+| `security-scan` | pip-audit, npm audit, bandit, gitleaks, trivy fs (`--strict`, `--only`, `--images` from Phase 8) |
 | `build-index` | Build and verify the index from `corpus/` (`--inspect` for chunk statistics) |
 | `verify-determinism` | SC1: N isolated rebuilds with different hash seeds must be byte-identical |
 | `dev` | API (uvicorn `--reload`) and web (Vite) together (`--api-only`, `--web-only`) |

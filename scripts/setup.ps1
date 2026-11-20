@@ -70,10 +70,13 @@ if ($SkipHooks) {
 Write-Step '6/7 Playwright browsers'
 if ($SkipPlaywright) {
     Write-Info 'skipped (--skip-playwright)'
-} elseif (Test-Path (Join-Path $root 'e2e/package.json')) {
-    if (-not (Invoke-Native npm @('--prefix', (Join-Path $root 'e2e'), 'exec', '--', 'playwright', 'install', 'chromium'))) { Stop-Script 'playwright install failed' }
 } else {
-    Write-Info 'no e2e package yet (Phase 7); nothing to install'
+    $e2e = Get-E2eDir
+    if (-not (Invoke-Native npm @('ci', '--prefix', $e2e, '--no-audit', '--no-fund'))) { Stop-Script 'npm ci (e2e) failed' }
+    # --with-deps installs OS libraries (sudo on Linux), so only CI asks for it.
+    $pwArgs = @('--prefix', $e2e, 'exec', '--', 'playwright', 'install') + $(if ($CiMode) { @('--with-deps', 'chromium') } else { @('chromium') })
+    if (-not (Invoke-Native npm $pwArgs)) { Stop-Script 'playwright install failed' }
+    Write-Ok 'e2e/node_modules + Playwright Chromium installed'
 }
 
 if ($Verify) {

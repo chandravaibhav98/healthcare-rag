@@ -61,7 +61,10 @@ export function useSubmitReview() {
           body,
         }),
       ),
-    onSuccess: () => client.invalidateQueries({ queryKey: ['admin'] }),
+    // Not awaited: the confirmation should not wait for every admin query to refetch.
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: ['admin'] });
+    },
   });
 }
 

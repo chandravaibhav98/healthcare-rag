@@ -492,15 +492,17 @@ Even with a synthetic corpus, users could type real patient information into que
 
 **Deliverables checklist**
 
-- [ ] Backend: unit, integration (Testcontainers Postgres), API, contract (Schemathesis), property-based (Hypothesis)
-- [ ] Evaluation regression tests (the SC2/SC3 gates from Phase 4)
-- [ ] Frontend: Vitest unit and component tests, MSW-mocked API
-- [ ] **Playwright functional E2E** (`e2e/tests/`): ask → validated; ask → abstain; citation evidence panel; login per role; review approve flow; config change appears in the audit log; RBAC denial
-- [ ] Load test: 50 virtual users for 5 minutes against `/qa`, with p95 < 300 ms and 0% 5xx (`scripts/load-test.*`)
-- [ ] Security: `pip-audit`, `npm audit`, Bandit, Trivy (filesystem and image), Gitleaks
-- [ ] `scripts/test.*` with flags `--backend --frontend --e2e --all --coverage`
+- [x] Backend: unit, integration (Testcontainers Postgres), API, contract (Schemathesis), property-based (Hypothesis)
+- [x] Evaluation regression tests (the SC2/SC3 gates from Phase 4)
+- [x] Frontend: Vitest unit and component tests, MSW-mocked API
+- [x] **Playwright functional E2E** (`e2e/tests/`): ask → validated; ask → abstain; citation evidence panel; login per role; review approve flow; config change appears in the audit log; RBAC denial
+- [x] Load test: 50 virtual users for 5 minutes against `/qa`, with p95 < 300 ms and 0% 5xx (`scripts/load-test.*`)
+- [x] Security: `pip-audit`, `npm audit`, Bandit, Trivy (filesystem; image scan with the Phase 8 images, OI-33), Gitleaks
+- [x] `scripts/test.*` with flags `--backend --frontend --e2e --all --coverage`
 
 **Exit criteria:** CI is green with every gate enforced.
+
+**Status (2026-11-15):** ✅ done; every gate passes locally and in a Linux sandbox, CI wiring checked with actionlint. The first GitHub run confirms the exit criterion (OI-31). Extras: axe-core accessibility gate on every route (closes OI-29), three bugs found by the new gates and fixed. See `docs/project/phase-7-report.md` and ADR-0013.
 
 ---
 
@@ -650,7 +652,7 @@ tag:   release notes → prod overlay manifests rendered as an artifact
 | `seed` | Create the admin user, demo query log and reviews | `--demo`, `--reset` |
 | `test` | Run the chosen test layers | `--backend --frontend --e2e --all --coverage` |
 | `eval` | Retrieval and validation evaluation plus threshold sweep, writing a report | `--split dev\|test`, `--threshold` |
-| `load-test` | k6 against `/qa` | `--vus`, `--duration`, `--target` |
+| `load-test` | k6 against `/qa` | `--vus`, `--duration`, `--target`, `--port`, `--p95` |
 | `lint` / `format` | ruff, mypy, eslint, prettier, tsc | `--fix` |
 | `gen-client` | Export OpenAPI and regenerate TS types | — |
 | `docker-up` / `docker-down` / `docker-rebuild` / `docker-logs` | Compose lifecycle | `--observability`, `--volumes` |
@@ -658,7 +660,7 @@ tag:   release notes → prod overlay manifests rendered as an artifact
 | `e2e` | Playwright functional suite | `--headed`, `--target local\|docker\|k8s` |
 | `demo-record` | Seed, record the demo, convert to MP4 | `--target`, `--keep-webm` |
 | `smoke` | Hit `/healthz`, `/readyz` and a sample `/qa` | `--base-url` |
-| `security-scan` | pip-audit, npm audit, bandit, trivy, gitleaks | `--images` |
+| `security-scan` | pip-audit, npm audit, bandit, trivy, gitleaks | `--images`, `--strict`, `--only` |
 | `clean` | Remove build outputs and reports | `--all` |
 
 ---
@@ -780,8 +782,14 @@ owning phase · 🟢 tracked, low risk
 | OI-24 | ADR-0008 names an `AuthProvider` protocol for OIDC; only local accounts exist. Needed before connecting the organisation's identity provider | Phase 12 (RUNBOOK) or later | 🟢 |
 | OI-25 | `/admin/stats` aggregates in Python from one windowed query; fine to about 1M rows per window, then move to SQL aggregates or a daily rollup table | When volume requires | 🟢 |
 | OI-26 | Windows CI cannot run Linux containers, so the PostgreSQL test variants run on Linux only (SQLite runs on both) | Phase 10 | 🟢 |
-| OI-29 | The browser accessibility audit (`e2e/audit/ui-audit.mjs`) needs Chrome and a running stack, so it is not yet in CI. Move it into the Phase 7 Playwright job (kind or compose) | Phase 7 | 🟠 |
-| OI-30 | The SPA bundle (gzip): 63 kB app + 78 kB React + 37 kB forms; dashboard adds 13 kB + 118 kB charts. Fine for an internal tool; measure on a slow profile before any public deployment | Phase 7 (performance) | 🟢 |
+| OI-30 | The SPA bundle (gzip): 63 kB app + 78 kB React + 37 kB forms; dashboard adds 13 kB + 118 kB charts. Fine for an internal tool; measure on a slow profile before any public deployment | Phase 8 (nginx caching) or before a public deployment | 🟢 |
+| OI-31 | **The Phase 7 CI jobs have not run on GitHub yet.** Every gate ran locally (Windows Git Bash VM) or in a Linux sandbox with the same commands, and `actionlint` passes; the first push confirms the exit criterion | Owner, on push | 🟠 |
+| OI-32 | Trivy's vulnerability database could not be downloaded in the verification sandbox (registry blocked), so `trivy fs` was verified for misconfiguration only; its lockfile CVE scan first runs in CI. pip-audit and npm audit cover the same lockfiles and are clean | CI first run | 🟢 |
+| OI-33 | Trivy **image** scanning needs the Phase 8 images; `security-scan --images` is a placeholder until then | Phase 8 | 🟠 |
+| OI-34 | GitHub's own actions (`actions/*`) and `astral-sh/setup-uv` are pinned by major tag; third-party actions and downloaded scanners are SHA-pinned. Pin all of them to SHAs with Dependabot updates | Phase 10 | 🟢 |
+| OI-35 | The Docker fallbacks in `security-scan.*` / `load-test.*` (gitleaks, trivy, k6 images) could not be pulled from the sandbox; k6 uses `grafana/k6:latest` unless `K6_IMAGE` is set. CI uses the checksum-verified binaries and `setup-k6-action` instead | Phase 8 (pin digests) | 🟢 |
+| OI-36 | Schemathesis' pytest plugin does not support pytest 9, so the contract tests use its Python API inside parametrized tests. Switch back if the plugin catches up | Dependency updates | 🟢 |
 
 Closed in Phase 4 (outcomes in `docs/project/phase-4-report.md` §4): OI-3, OI-4, OI-5,
-OI-6, OI-7. Closed in Phase 5 (`docs/project/phase-5-report.md` §4): OI-12.
+OI-6, OI-7. Closed in Phase 5 (`docs/project/phase-5-report.md` §4): OI-12. Closed in
+Phase 7 (`docs/project/phase-7-report.md` §4): OI-29.

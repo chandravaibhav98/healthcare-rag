@@ -46,6 +46,13 @@ export default defineConfig({
     setupFiles: ['./src/test/setup.ts'],
     restoreMocks: true,
     css: false,
-    coverage: { provider: 'v8', include: ['src/**'], exclude: ['src/api/generated/**'] },
+    coverage: {
+      provider: 'v8',
+      include: ['src/**'],
+      exclude: ['src/api/generated/**', 'src/test/**', 'src/main.tsx'],
+      reporter: ['text-summary', 'json-summary', 'lcov'],
+      // Phase 7 gate (plan §4): the frontend must stay at or above 70%.
+      thresholds: { lines: 70, statements: 70, functions: 70, branches: 70 },
+    },
   },
 });

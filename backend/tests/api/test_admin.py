@@ -184,6 +184,8 @@ def test_stats_window(api: AuthedClient) -> None:
     assert api.get(f"{PREFIX}/stats", params=naive).status_code == 422
     too_long = {"from": (now - timedelta(days=400)).isoformat(), "to": now.isoformat()}
     assert api.get(f"{PREFIX}/stats", params=too_long).status_code == 422
+    # Regression (Schemathesis, Phase 7): the default window must not underflow year 1.
+    assert api.get(f"{PREFIX}/stats", params={"to": "0001-01-01T00:00:00Z"}).status_code == 422
 
 
 # --- runtime configuration ------------------------------------------------------------------------------

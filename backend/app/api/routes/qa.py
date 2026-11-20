@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from starlette.concurrency import run_in_threadpool
 
 from app.api.deps import (
+    OPTIONAL_AUTH,
     OptionalUserDep,
     QAServiceDep,
     RequestIdDep,
@@ -60,6 +61,7 @@ router.add_api_route(
     description=_DESCRIPTION,
     responses=_RESPONSES,
     dependencies=_DEPS,
+    openapi_extra=OPTIONAL_AUTH,
 )
 # Spec alias (brief D1). Same handler, so behaviour cannot diverge (ADR-0006).
 router.add_api_route(
@@ -72,4 +74,5 @@ router.add_api_route(
     description=_DESCRIPTION,
     responses=_RESPONSES,
     dependencies=_DEPS,
+    openapi_extra=OPTIONAL_AUTH,
 )

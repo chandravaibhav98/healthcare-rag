@@ -13,6 +13,7 @@ _HCRAG_COMMON_LOADED=1
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 BACKEND_DIR="$REPO_ROOT/backend"
 FRONTEND_DIR="$REPO_ROOT/frontend"
+E2E_DIR="$REPO_ROOT/e2e"
 STEP_FAILURES=()
 
 # UTF-8 mode for every Python process we start. Under Git Bash (mintty), stdout is a

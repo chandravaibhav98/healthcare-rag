@@ -68,6 +68,9 @@ def _build_openapi(app: FastAPI) -> dict[str, Any]:
     FastAPI documents every response model under `application/json`. The real error
     media type is set here so the published contract matches the wire (ADR-0006). Only
     ProblemDetails bodies are converted: `/readyz` returns its own model with 503.
+    Also: optional-auth routes are marked `security: [{}, bearer]`, and every operation
+    with a body documents the 400 FastAPI sends for malformed JSON (both found by the
+    Phase 7 Schemathesis run).
     """
     if app.openapi_schema:
         return app.openapi_schema
@@ -79,11 +82,28 @@ def _build_openapi(app: FastAPI) -> dict[str, Any]:
     )
     for path_item in schema.get("paths", {}).values():
         for operation in path_item.values():
+            if operation.pop("x-optional-auth", False):
+                operation["security"] = [{}, {"bearerAuth": []}]
+            # A body that is not valid JSON never reaches validation: FastAPI answers 400.
+            if "requestBody" in operation:
+                operation["responses"].setdefault(
+                    "400",
+                    {
+                        "description": "Bad Request (body is not valid JSON)",
+                        "content": {"application/json": {"schema": {"$ref": _PROBLEM_REF}}},
+                    },
+                )
             for code, response in operation.get("responses", {}).items():
-                content = response.get("content", {})
-                body = content.get("application/json", {})
-                if code[:1] in {"4", "5"} and body.get("schema", {}).get("$ref") == _PROBLEM_REF:
-                    response["content"] = {PROBLEM_JSON: body}
+                # Routes with a non-JSON response class (e.g. the gold JSONL export) get
+                # their errors documented under that media type; errors are always
+                # problem+json on the wire, whatever the success type.
+                for body in response.get("content", {}).values():
+                    if (
+                        code[:1] in {"4", "5"}
+                        and body.get("schema", {}).get("$ref") == _PROBLEM_REF
+                    ):
+                        response["content"] = {PROBLEM_JSON: body}
+                        break
     app.openapi_schema = schema
     return schema
 

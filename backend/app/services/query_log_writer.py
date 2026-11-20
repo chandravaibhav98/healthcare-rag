@@ -62,6 +62,9 @@ class QueryLogWriter:
     ) -> None:
         self._db = db
         self._metrics = metrics
+        self._max_queue = max_queue
+        # Created in start(): an asyncio.Queue binds to the loop that first uses it, and the
+        # app's lifespan may run more than once (tests, ASGI servers that restart it).
         self._queue: asyncio.Queue[dict[str, Any]] = asyncio.Queue(maxsize=max_queue)
         self._loop: asyncio.AbstractEventLoop | None = None
         self._task: asyncio.Task[None] | None = None
@@ -69,6 +72,7 @@ class QueryLogWriter:
     # -- lifecycle (event loop thread) -------------------------------------------------
     def start(self) -> None:
         self._loop = asyncio.get_running_loop()
+        self._queue = asyncio.Queue(maxsize=self._max_queue)
         self._task = asyncio.create_task(self._run(), name="query-log-writer")
 
     async def stop(self, timeout_s: float = 5.0) -> None:
@@ -79,6 +83,8 @@ class QueryLogWriter:
             self._task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await self._task
+            self._task = None
+        self._loop = None  # submits after shutdown are counted as dropped
 
     async def flush(self) -> None:
         await self._queue.join()

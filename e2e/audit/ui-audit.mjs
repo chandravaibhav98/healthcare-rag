@@ -6,7 +6,7 @@
 // it only against a freshly seeded development stack:
 //
 //   scripts/seed.sh --reset --demo && scripts/dev.sh        # API :8000, web :5173
-//   cd e2e/audit && npm ci && BASE_URL=http://localhost:5173 CHROME_PATH=/path/to/chrome npm run audit
+//   npm ci --prefix e2e && BASE_URL=http://localhost:5173 CHROME_PATH=/path/to/chrome npm --prefix e2e run audit
 //
 // Exit code 1 if any flow fails, axe finds a serious/critical violation, or a Lighthouse
 // accessibility score is below 95.

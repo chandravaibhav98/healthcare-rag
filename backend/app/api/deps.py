@@ -9,7 +9,9 @@ auth/admin route answers 503.
 
 from __future__ import annotations
 
+import inspect
 from collections.abc import AsyncIterator, Callable, Collection
+from enum import StrEnum
 from typing import Annotated, Literal
 
 from fastapi import Depends, HTTPException, Query, Request, status
@@ -28,6 +30,9 @@ from app.services.auth_service import AuthError, AuthService
 from app.services.qa_service import QAService
 
 MAX_PAGE_SIZE = 200
+#: Marks routes where a bearer token is optional; the OpenAPI builder (app.main) turns it
+#: into `security: [{}, {bearerAuth: []}]` (anonymous OR bearer).
+OPTIONAL_AUTH: dict[str, object] = {"x-optional-auth": True}
 _bearer = HTTPBearer(
     auto_error=False,
     scheme_name="bearerAuth",
@@ -154,25 +159,57 @@ def get_actor(request: Request, user: Annotated[User | None, Depends(get_optiona
 
 
 # --- pagination ------------------------------------------------------------------------
-def page_params(sortable: Collection[str], default: str) -> Callable[..., PageRequest]:
-    """Dependency factory for `limit`, `offset`, `sort`, `order` with a whitelisted sort."""
+#: Offsets beyond this are rejected (422) rather than overflowing a database integer.
+MAX_OFFSET = 1_000_000
+
+
+def page_params(
+    sortable: Collection[str], default: str, *, name: str
+) -> Callable[..., PageRequest]:
+    """Dependency factory for `limit`, `offset`, `sort`, `order`.
+
+    `sort` is published as an enum of the allowed columns, so the OpenAPI contract says
+    exactly which values are valid (Schemathesis checks this). The signature is built
+    explicitly because the enum is created at runtime and `from __future__ import
+    annotations` would turn a closure annotation into an unresolvable string.
+    """
     allowed = sorted(sortable)
+    sort_enum = StrEnum(name, {column: column for column in allowed})  # type: ignore[misc]
 
-    def dependency(
-        limit: Annotated[int, Query(ge=1, le=MAX_PAGE_SIZE)] = 50,
-        offset: Annotated[int, Query(ge=0)] = 0,
-        # A default-value Query (not Annotated): annotations are strings under
-        # `from __future__ import annotations` and cannot see this closure's locals.
-        sort: str = Query(default, description=f"One of: {', '.join(allowed)}."),
-        order: Annotated[Literal["asc", "desc"], Query()] = "desc",
-    ) -> PageRequest:
-        if sort not in sortable:
-            raise HTTPException(
-                status.HTTP_422_UNPROCESSABLE_CONTENT,
-                detail=f"sort must be one of: {', '.join(allowed)}",
-            )
-        return PageRequest(limit=limit, offset=offset, sort=sort, descending=order == "desc")
+    def dependency(limit: int, offset: int, sort: StrEnum, order: str) -> PageRequest:
+        return PageRequest(
+            limit=limit, offset=offset, sort=str(sort.value), descending=order == "desc"
+        )
 
+    dependency.__signature__ = inspect.Signature(  # type: ignore[attr-defined]
+        [
+            inspect.Parameter(
+                "limit",
+                inspect.Parameter.KEYWORD_ONLY,
+                default=50,
+                annotation=Annotated[int, Query(ge=1, le=MAX_PAGE_SIZE)],
+            ),
+            inspect.Parameter(
+                "offset",
+                inspect.Parameter.KEYWORD_ONLY,
+                default=0,
+                annotation=Annotated[int, Query(ge=0, le=MAX_OFFSET)],
+            ),
+            inspect.Parameter(
+                "sort",
+                inspect.Parameter.KEYWORD_ONLY,
+                default=sort_enum(default),
+                annotation=Annotated[sort_enum, Query(description="Column to sort by.")],
+            ),
+            inspect.Parameter(
+                "order",
+                inspect.Parameter.KEYWORD_ONLY,
+                default="desc",
+                annotation=Annotated[Literal["asc", "desc"], Query()],
+            ),
+        ],
+        return_annotation=PageRequest,
+    )
     return dependency
 
 
