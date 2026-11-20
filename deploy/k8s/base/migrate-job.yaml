@@ -1,7 +1,8 @@
 # Database migrations run as a Job BEFORE the API rolls out (the API refuses to start on
-# an out-of-date schema: SchemaNotAtHeadError). Jobs are immutable, so scripts/k8s-up.*
-# deletes the finished Job before re-applying; with Argo CD the hook annotations below do
-# the same (run before each sync, delete the previous run).
+# an out-of-date schema: SchemaNotAtHeadError). scripts/k8s-up.* applies in two passes:
+# everything not labelled healthcare-rag/apply-after=migrate, wait for this Job, then the
+# rest. Jobs are immutable, so it deletes the finished Job before re-applying. With Argo
+# CD the hook annotations below give the same order (run before each sync).
 apiVersion: batch/v1
 kind: Job
 metadata:

@@ -4,7 +4,9 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   name: db-seed
-  labels: { app.kubernetes.io/component: seed }
+  labels:
+    app.kubernetes.io/component: seed
+    healthcare-rag/apply-after: migrate
 spec:
   backoffLimit: 8
   activeDeadlineSeconds: 900

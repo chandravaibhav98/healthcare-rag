@@ -49,6 +49,8 @@
 | 2 | Design review of the index rollout | **Index-version bookkeeping assumed one host.** After an image rollout the DB still named the old version as active at the same path, so each pod would re-load the new files every poll and the dashboard would show the wrong index; old pods during a rollout would try to "follow" a version they do not have | The deployed index wins at start-up (audited); pods never follow a version whose files they lack; activating such a version is 409. `tests/integration/test_index_rollout.py` (SQLite + PostgreSQL) fails on the old code |
 | 3 | k8s-verify | Checking the served index right after `rollout status` saw old pods for a few seconds (kept-alive connections to terminating pods) | The check waits for 20 consecutive matching answers (60 s limit); not a defect in the app |
 | 4 | k8s-verify | A failed check could leave the candidate index deployed | The script rolls back on any failure |
+| 5 | Re-verification from a fresh clone | `k8s-up` applied the API together with `db-migrate`, so on a first deploy each API pod crash-looped (`SchemaNotAtHeadError`, 2 restarts) until the Job finished; on an upgrade new pods would race the migration | Two-pass apply: everything not labelled `healthcare-rag/apply-after=migrate`, wait for postgres and `db-migrate`, then the API and seed Job. Now 0 restarts, and the migration completes before the first API pod starts |
+| 6 | Re-verification | `k8s-up` reported ready while the HPA was still raising the API from 1 to 2 replicas | Waits for 2 ready replicas (the HPA minimum) |
 
 ## 4. Open issues
 
@@ -57,7 +59,17 @@ Closed: **OI-13** (ingress-nginx retired in March 2026; the Gateway API is used)
 OI-37 (verified on k3s/Traefik and stand-in images; kind + Envoy in CI), OI-38 (no egress
 policies). Updated: OI-11 (rate limits are per pod, now 2–6 pods).
 
-## 5. How this was verified
+## 5. Re-verification (fresh clone of the committed repo)
+
+Clean slate (no images, no build cache, no namespace), then from commit `2d613d3`:
+`k8s-up` (bash and PowerShell) from scratch; 37 checklist assertions against the live
+cluster and the rendered overlays (all pass); E2E 20/20 through the gateway;
+NetworkPolicy probes as in §2; `k8s-verify` in both shells with 0 failed requests
+(rolling restart 1,752 and 1,758 requests; index rollout and rollback 1,760 and 1,743);
+kubeconform, actionlint, pre-commit and trivy's misconfiguration scan clean. Defects 5
+and 6 were found and fixed in this pass.
+
+## 6. How this was verified
 
 The sandbox cannot pull from Docker Hub or GHCR, so kind's node image and Envoy
 Gateway's images were unavailable. Verification used **k3s v1.37.2** (from GitHub

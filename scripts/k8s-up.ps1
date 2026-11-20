@@ -138,13 +138,22 @@ images:
 [System.IO.File]::WriteAllText((Join-Path $gen 'kustomization.yaml'), ($kustomization -replace "`r`n", "`n") + "`n")
 Write-Step "Applying the local overlay (index $indexVersion)"
 if (-not (Invoke-Kube @('-n', $ns, 'delete', 'job', 'db-migrate', 'db-seed', '--ignore-not-found'))) { Stop-Script 'job cleanup failed' }
+# Pass 1: everything except what must wait for the schema (the API, the seed Job).
+if (-not (Invoke-Kube @('apply', '-k', $gen, '-l', 'healthcare-rag/apply-after!=migrate'))) { Stop-Script 'kubectl apply failed' }
+Write-Step 'Migrating the database'
+foreach ($w in @(
+        @('-n', $ns, 'rollout', 'status', 'statefulset/postgres', '--timeout=300s'),
+        @('-n', $ns, 'wait', 'job/db-migrate', '--for=condition=Complete', '--timeout=600s'))) {
+    if (-not (Invoke-Kube $w)) { Stop-Script "timed out: kubectl $($w -join ' ')" }
+}
+# Pass 2: the API now starts on an up-to-date schema.
+Write-Step 'Rolling out the API'
 if (-not (Invoke-Kube @('apply', '-k', $gen))) { Stop-Script 'kubectl apply failed' }
 
-Write-Step 'Waiting for the rollout'
 $waits = @(
-    @('-n', $ns, 'rollout', 'status', 'statefulset/postgres', '--timeout=300s'),
-    @('-n', $ns, 'wait', 'job/db-migrate', '--for=condition=Complete', '--timeout=600s'),
     @('-n', $ns, 'rollout', 'status', 'deployment/api', '--timeout=300s'),
+    # No fixed replica count (the HPA owns it): wait for the HPA minimum of 2.
+    @('-n', $ns, 'wait', 'deployment/api', "--for=jsonpath={.status.readyReplicas}=2", '--timeout=180s'),
     @('-n', $ns, 'rollout', 'status', 'deployment/web', '--timeout=300s'),
     @('-n', $ns, 'wait', 'job/db-seed', '--for=condition=Complete', '--timeout=600s'),
     @('-n', $ns, 'wait', 'gateway/hcrag', '--for=condition=Programmed', '--timeout=300s')

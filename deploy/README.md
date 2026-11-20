@@ -63,7 +63,9 @@ scripts/k8s-down.sh          # delete the cluster (--namespace-only keeps it)
 E2E_BASE_URL=http://localhost:8088 E2E_PASSWORD=<SEED_ADMIN_PASSWORD> npm --prefix e2e test
 ```
 
-`k8s-up` tags `rag-api`/`rag-web` by image content, so re-running it rolls only what
+`k8s-up` applies in two passes: everything except the API and the seed Job, then (after
+`db-migrate` completes) the rest, so the API never starts on an old schema. It tags
+`rag-api`/`rag-web` by image content, so re-running it rolls only what
 changed. Credentials: `deploy/k8s/overlays/local/secrets.env` (git-ignored, generated).
 Another cluster (k3d, minikube, k3s): `K8S_CONTEXT=<ctx> K8S_IMAGE_LOADER="<cmd reading
 an image tar on stdin>" scripts/k8s-up.sh --existing-cluster`, with a Gateway API

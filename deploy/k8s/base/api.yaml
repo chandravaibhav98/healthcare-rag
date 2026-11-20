@@ -10,7 +10,11 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: api
-  labels: { app.kubernetes.io/component: api }
+  labels:
+    app.kubernetes.io/component: api
+    # scripts/k8s-up.* applies this only after db-migrate has completed (the API refuses
+    # to start on an out-of-date schema; applied together, it would crash-loop meanwhile).
+    healthcare-rag/apply-after: migrate
 spec:
   # No `replicas`: the HorizontalPodAutoscaler owns the count (2-6, autoscaling.yaml).
   # A fixed value here would reset the HPA's choice on every `kubectl apply`.

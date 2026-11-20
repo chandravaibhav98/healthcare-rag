@@ -146,12 +146,17 @@ YAML
 log_step "Applying the local overlay (index $INDEX_VERSION)"
 # Jobs are immutable: remove the previous runs so this build's migration and seed run.
 run kube -n "$K8S_NAMESPACE" delete job db-migrate db-seed --ignore-not-found
-run kube apply -k "$GEN"
-
-log_step "Waiting for the rollout"
+# Pass 1: everything except what must wait for the schema (the API, the seed Job).
+run kube apply -k "$GEN" -l 'healthcare-rag/apply-after!=migrate'
+log_step "Migrating the database"
 run kube -n "$K8S_NAMESPACE" rollout status statefulset/postgres --timeout=300s
 run kube -n "$K8S_NAMESPACE" wait job/db-migrate --for=condition=Complete --timeout=600s
+# Pass 2: the API (new image and index) now starts on an up-to-date schema.
+log_step "Rolling out the API"
+run kube apply -k "$GEN"
 run kube -n "$K8S_NAMESPACE" rollout status deployment/api --timeout=300s
+# The Deployment has no fixed replica count (the HPA owns it): wait for the HPA minimum.
+run kube -n "$K8S_NAMESPACE" wait deployment/api --for=jsonpath='{.status.readyReplicas}'=2 --timeout=180s
 run kube -n "$K8S_NAMESPACE" rollout status deployment/web --timeout=300s
 run kube -n "$K8S_NAMESPACE" wait job/db-seed --for=condition=Complete --timeout=600s
 run kube -n "$K8S_NAMESPACE" wait gateway/hcrag --for=condition=Programmed --timeout=300s

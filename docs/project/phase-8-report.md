@@ -52,7 +52,17 @@
 New: OI-37 (verified on stand-in base images). Updated: OI-33 (image scan wired, first
 real run in CI), OI-35 (base images by tag; digests in Phase 10).
 
-## 5. How this was verified
+## 5. Re-verification (fresh clone of the committed repo)
+
+From commit `2d613d3`, with no images and an empty build cache: `docker-up.sh --demo`
+built and started everything in 60 s and passed the smoke test. 45 assertions covered
+every checklist item (non-root users, read-only filesystems, HEALTHCHECK, no secrets or
+tests in the image, SPA fallback, gzip, cache headers, CSP and security headers,
+`/metrics` and `/docs` not exposed, Compose ordering and network isolation, every
+dashboard metric present in `/metrics`, script `--help` in both shells). The index
+image's manifest is byte-identical to the determinism build. No defects found.
+
+## 6. How this was verified
 
 The sandbox has a Docker engine but cannot reach Docker Hub or GHCR. So local
 **stand-ins** were built for each base image (Ubuntu 24.04 with Python 3.12, Node 26,
