@@ -1,12 +1,16 @@
 """A disposable, seeded API for the Playwright suite (plan Phase 7).
 
-    uv run python scripts/e2e_server.py --port 8100 [--data-dir artifacts/e2e]
+    uv run python scripts/e2e_server.py --port 8100 [--data-dir artifacts/e2e] [--candidate-index]
 
 Every start wipes its data directory (default `artifacts/e2e/`), migrates a fresh SQLite database, seeds the admin,
 reviewer and user accounts plus a week of demo history (scripts/seed.py --demo), and
 serves the API with generous rate limits. Playwright starts it through `webServer`
 (e2e/playwright.config.ts) and scripts/load-test.* starts it (with its own data
 directory) when no target is given; it is never used outside tests.
+
+`--candidate-index` (the Phase 11 demo, E2E_CANDIDATE_INDEX=1) also builds a second index
+with larger chunks (100-200 tokens, like scripts/k8s-verify's candidate) into the index
+store, so the dashboard has a version to activate and roll back.
 """
 
 from __future__ import annotations
@@ -31,6 +35,11 @@ def main(argv: list[str] | None = None) -> int:
         default=None,
         help="Disposable data directory, wiped on start (default: artifacts/e2e).",
     )
+    parser.add_argument(
+        "--candidate-index",
+        action="store_true",
+        help="Also build a second index version (larger chunks) into the index store.",
+    )
     args = parser.parse_args(argv)
 
     from app.core.config import REPO_ROOT
@@ -50,6 +59,9 @@ def main(argv: list[str] | None = None) -> int:
         index_dir = data / "index"
         print(f"e2e: building the index into {index_dir}")
         build_index(REPO_ROOT / "corpus", index_dir)
+
+    if args.candidate_index:
+        _build_candidate(data / "indexes")
 
     os.environ.update(
         APP_ENV="development",
@@ -86,6 +98,23 @@ def main(argv: list[str] | None = None) -> int:
         access_log=False,  # one line per request drowns the load test and E2E output
     )
     return 0
+
+
+def _build_candidate(store: Path) -> None:
+    """A second, equally valid index (another chunking) for the activate/rollback demo."""
+    from app.core.config import REPO_ROOT
+    from app.rag.ingestion.chunker import ChunkingConfig
+    from app.rag.pipeline import BuildConfig, build_index
+
+    tmp = store / ".candidate"
+    result = build_index(
+        REPO_ROOT / "corpus",
+        tmp,
+        BuildConfig(chunking=ChunkingConfig(min_tokens=100, max_tokens=200)),
+    )
+    version = str(result.manifest["index_version"])
+    tmp.rename(store / version)
+    print(f"e2e: candidate index {version} in {store}")
 
 
 if __name__ == "__main__":

@@ -6,6 +6,10 @@ Contract for a corpus file:
 * is UTF-8 Markdown. CRLF and non-NFC input is normalised in memory.
 
 Files are visited in sorted POSIX-path order so every build sees the same sequence.
+
+Where the bytes come from is a `DocumentSource` (`app.rag.ingestion.sources`): the local
+`corpus/` directory today, the organisation's guideline gateway later (RUNBOOK §4). Every
+source goes through the same validation, so a swap cannot weaken it.
 """
 
 from __future__ import annotations
@@ -18,6 +22,7 @@ from pydantic import ValidationError
 
 from app.domain.models import DocStatus, Document, FrontMatter
 from app.rag.ingestion.normalizer import decode_utf8, normalize_text, sha256_text
+from app.rag.ingestion.sources import DocumentSource, LocalDirectorySource
 
 #: Documentation files that may live in the corpus tree but are not guidelines.
 NON_GUIDELINE_FILES: Final = frozenset({"README.md", "CORPUS_CARD.md"})
@@ -47,16 +52,24 @@ def split_front_matter(text: str, source: str) -> tuple[dict[str, object], str]:
 
 def load_document(path: Path, corpus_root: Path) -> Document:
     rel = path.relative_to(corpus_root).as_posix()
-    text = normalize_text(decode_utf8(path.read_bytes(), rel))
+    return parse_document(rel, path.read_bytes())
+
+
+def parse_document(rel: str, data: bytes) -> Document:
+    """Validate one guideline file given its corpus-relative POSIX path and raw bytes."""
+    text = normalize_text(decode_utf8(data, rel))
     raw_meta, body = split_front_matter(text, rel)
     try:
         meta = FrontMatter.model_validate(raw_meta)
     except ValidationError as exc:
         raise CorpusError(f"{rel}: invalid front-matter:\n{exc}") from exc
 
-    if path.stem != meta.doc_id:
+    parts = rel.split("/")
+    stem = parts[-1].removesuffix(".md")
+    parent = parts[-2] if len(parts) > 1 else ""
+    if stem != meta.doc_id:
         raise CorpusError(f"{rel}: file name must be '{meta.doc_id}.md'")
-    if path.parent.name != meta.source_org.value.lower():
+    if parent != meta.source_org.value.lower():
         raise CorpusError(
             f"{rel}: source_org {meta.source_org.value} must live in '{meta.source_org.value.lower()}/'"
         )
@@ -66,15 +79,21 @@ def load_document(path: Path, corpus_root: Path) -> Document:
 
 
 def load_corpus(corpus_root: Path) -> list[Document]:
+    """The local corpus directory (the default source)."""
     if not corpus_root.is_dir():
         raise CorpusError(f"corpus directory not found: {corpus_root}")
-    paths = sorted(
-        (p for p in corpus_root.rglob("*.md") if p.name not in NON_GUIDELINE_FILES),
-        key=lambda p: p.relative_to(corpus_root).as_posix(),
-    )
-    docs = [load_document(p, corpus_root) for p in paths]
+    return load_documents(LocalDirectorySource(corpus_root, skip=NON_GUIDELINE_FILES))
+
+
+def load_documents(source: DocumentSource) -> list[Document]:
+    """Load, validate and cross-check every guideline file a source provides."""
+    files = list(source.files())
+    paths = [f.path for f in files]
+    if paths != sorted(paths):
+        raise CorpusError(f"{source.name}: files must be yielded in sorted path order")
+    docs = [parse_document(f.path, f.data) for f in files]
     if not docs:
-        raise CorpusError(f"no guideline documents found under {corpus_root}")
+        raise CorpusError(f"no guideline documents found in {source.name}")
     _check_corpus(docs)
     return docs
 

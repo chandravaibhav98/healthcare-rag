@@ -1,7 +1,8 @@
 # ADR-0008 — Persistence, authentication and index distribution
 
-- **Status:** Accepted for persistence and auth (Phase 5). Index distribution in Kubernetes
-  stays *Proposed* until Phase 9.
+- **Status:** Accepted. Persistence and auth in Phase 5; index distribution (index as an
+  OCI image, copied by an init container) implemented and verified in Phase 9 (ADR-0015).
+  The OIDC `AuthProvider` remains future work (OI-24).
 - **Date:** 2026-11-07 · revised 2026-11-13 (Phase 5)
 - **Plan ref:** `plan.md` §3 ADR-008
 

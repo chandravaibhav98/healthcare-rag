@@ -1,0 +1,83 @@
+# Demo video (Phase 11): record the narrated walkthrough with scripts/demo-record.sh on a
+# clean runner and publish the MP4. Run it by hand (Actions → demo → Run workflow), or
+# let release.yml call it, which attaches the video to the GitHub Release.
+#
+# Not part of ci-passed: the demo asserts what it shows, but the same journeys are already
+# gated by the functional E2E suite, and a 6-minute recording on every PR would cost
+# minutes for no extra signal.
+name: demo
+
+on:
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      release_tag:
+        description: Attach the video to this GitHub Release
+        type: string
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  record:
+    name: record demo video
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: write # only used to attach the video to a release
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: |
+            frontend/package-lock.json
+            e2e/package-lock.json
+      - name: ffmpeg (H.264)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends ffmpeg
+          ffmpeg -hide_banner -encoders | grep -q libx264
+      # Dependencies and Chromium (with Playwright's ffmpeg); lint and tests run in ci.yml.
+      - name: Setup
+        run: bash scripts/setup.sh --ci --no-verify
+      - name: Record (cold start → MP4 with chapters + GIF teaser)
+        run: bash scripts/demo-record.sh --gif --ci
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: demo-video
+          path: |
+            artifacts/demo/*.mp4
+            artifacts/demo/*.gif
+            artifacts/demo/*.chapters.txt
+          retention-days: 14
+          if-no-files-found: error
+      - name: Attach to the release
+        if: inputs.release_tag != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.release_tag }}
+        run: |
+          set -euo pipefail
+          cd artifacts/demo
+          for f in healthcare-rag-demo-*.mp4 healthcare-rag-demo-*.gif healthcare-rag-demo-*.chapters.txt; do
+            ext="${f#healthcare-rag-demo-*.}"
+            cp "$f" "healthcare-rag-demo-$TAG.$ext"
+          done
+          gh release upload "$TAG" --clobber --repo "$GITHUB_REPOSITORY" \
+            "healthcare-rag-demo-$TAG.mp4" "healthcare-rag-demo-$TAG.gif" "healthcare-rag-demo-$TAG.chapters.txt"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: failure()
+        with:
+          name: demo-failure
+          path: artifacts/demo/run/
+          if-no-files-found: ignore

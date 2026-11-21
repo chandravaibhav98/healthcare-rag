@@ -1,7 +1,9 @@
-# Optional: scrape the API with the Prometheus Operator (plan §4 Phase 9).
+# Optional: scrape the API with the Prometheus Operator (plan §4 Phase 9) and load the
+# alert rules (Phase 12, RUNBOOK §6).
 #   components: [../../components/service-monitor]
 # Label the namespace Prometheus runs in: healthcare-rag/monitoring=true.
 apiVersion: kustomize.config.k8s.io/v1alpha1
 kind: Component
 resources:
   - service-monitor.yaml
+  - prometheus-rule.yaml

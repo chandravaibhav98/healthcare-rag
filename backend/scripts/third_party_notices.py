@@ -1,0 +1,160 @@
+"""Write THIRD_PARTY_NOTICES.md: the third-party software the shipped images contain.
+
+    uv run python scripts/third_party_notices.py [--check]
+
+Covered (what a deployment redistributes):
+* Python runtime dependencies of the API image: `uv export --no-dev` resolved against the
+  installed environment's package metadata (licence expression, classifiers or field);
+* JavaScript production dependencies bundled into the SPA: package-lock.json entries not
+  marked `dev`, licence from node_modules/<pkg>/package.json;
+* the container base images (fixed table below, reviewed by hand).
+Development tools (pytest, Playwright, ESLint …) are not redistributed and not listed.
+
+`--check` exits 1 when the committed file is out of date (run after dependency updates;
+part of the release checklist in RUNBOOK §8).
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import shutil
+import subprocess
+import sys
+from importlib import metadata
+from pathlib import Path
+from typing import Final
+
+ROOT: Final = Path(__file__).resolve().parents[2]
+OUT: Final = ROOT / "THIRD_PARTY_NOTICES.md"
+
+#: Base images of deploy/docker/*.Dockerfile and deploy/compose (runtime stages only).
+BASE_IMAGES: Final = (
+    (
+        "python:3.12-slim",
+        "rag-api runtime",
+        "PSF-2.0 (CPython); Debian packages under their own licences",
+    ),
+    (
+        "nginxinc/nginx-unprivileged:1.30-alpine",
+        "rag-web runtime",
+        "BSD-2-Clause (nginx); Alpine packages under their own licences",
+    ),
+    (
+        "busybox:1.37",
+        "rag-index runtime",
+        "GPL-2.0-only (BusyBox): corresponding source at https://busybox.net/downloads/",
+    ),
+    (
+        "postgres:18-alpine",
+        "Compose / local Kubernetes database (not in the app images)",
+        "PostgreSQL License",
+    ),
+)
+
+_CLASSIFIER_PREFIX: Final = "License :: OSI Approved :: "
+
+
+def python_packages() -> list[tuple[str, str, str]]:
+    uv = shutil.which("uv")
+    if uv is None:
+        raise SystemExit("uv is required: https://docs.astral.sh/uv/")
+    out = subprocess.run(  # noqa: S603  (fixed arguments, resolved executable)
+        [uv, "export", "--frozen", "--no-dev", "--no-hashes", "--no-emit-project"],
+        cwd=ROOT / "backend",
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+    rows = []
+    for line in out.splitlines():
+        if not line or line[0] in "# ":
+            continue
+        name, _, rest = line.partition("==")
+        version = rest.split(";")[0].strip()
+        rows.append((name, version, _python_licence(name)))
+    return sorted(rows, key=lambda r: r[0].lower())
+
+
+def _python_licence(name: str) -> str:
+    try:
+        meta = metadata.metadata(name)
+    except metadata.PackageNotFoundError:
+        return "UNKNOWN (not installed)"
+    expression = meta.get("License-Expression")
+    if expression:
+        return expression.strip()
+    classifiers = [
+        c.removeprefix(_CLASSIFIER_PREFIX)
+        for c in meta.get_all("Classifier") or []
+        if c.startswith(_CLASSIFIER_PREFIX)
+    ]
+    if classifiers:
+        return "; ".join(sorted(set(classifiers)))
+    field = (meta.get("License") or "").strip()
+    first = field.splitlines()[0] if field else ""
+    return first[:60] if first and len(first) <= 60 else ("see package" if field else "UNKNOWN")
+
+
+def javascript_packages() -> list[tuple[str, str, str]]:
+    frontend = ROOT / "frontend"
+    lock = json.loads((frontend / "package-lock.json").read_text(encoding="utf-8"))
+    rows = []
+    for key, info in lock.get("packages", {}).items():
+        if not key or info.get("dev") or info.get("devOptional") or info.get("optional"):
+            continue
+        name = key.split("node_modules/")[-1]
+        manifest = frontend / key / "package.json"
+        licence = "UNKNOWN (run npm ci --prefix frontend)"
+        if manifest.is_file():
+            data = json.loads(manifest.read_text(encoding="utf-8"))
+            raw = data.get("license") or data.get("licenses")
+            licence = raw if isinstance(raw, str) else json.dumps(raw)
+        rows.append((name, str(info.get("version", "")), licence))
+    return sorted(set(rows), key=lambda r: r[0].lower())
+
+
+def render() -> str:
+    def table(rows: list[tuple[str, str, str]]) -> str:
+        lines = ["| Package | Version | Licence |", "| --- | --- | --- |"]
+        lines += [f"| {n} | {v} | {lic} |" for n, v, lic in rows]
+        return "\n".join(lines)
+
+    py = python_packages()
+    js = javascript_packages()
+    images = ["| Image | Used as | Licence |", "| --- | --- | --- |"]
+    images += [f"| `{i}` | {use} | {lic} |" for i, use, lic in BASE_IMAGES]
+    return (
+        "# Third-party notices\n\n"
+        "This project is MIT-licensed (`LICENSE`). The software below is redistributed in its\n"
+        "container images and web bundle under its own licence. Generated by\n"
+        "`backend/scripts/third_party_notices.py` from the lockfiles; do not edit by hand.\n\n"
+        "The guideline corpus (`corpus/`) is synthetic and written for this project.\n\n"
+        f"## Container base images\n\n{chr(10).join(images)}\n\n"
+        f"## Python runtime dependencies (API image, {len(py)})\n\n{table(py)}\n\n"
+        f"## JavaScript production dependencies (web bundle, {len(js)})\n\n{table(js)}\n"
+    )
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--check", action="store_true", help="fail if the file is out of date")
+    args = parser.parse_args(argv)
+    text = render()
+    if args.check:
+        current = OUT.read_text(encoding="utf-8") if OUT.is_file() else ""
+        if current != text:
+            print(f"{OUT.name} is out of date: run backend/scripts/third_party_notices.py")
+            return 1
+        print(f"{OUT.name} is current")
+        return 0
+    OUT.write_text(text, encoding="utf-8", newline="\n")
+    unknown = [r for r in text.splitlines() if "UNKNOWN" in r]
+    print(f"wrote {OUT.relative_to(ROOT)} ({len(unknown)} unknown licences)")
+    for row in unknown:
+        print("  " + row)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

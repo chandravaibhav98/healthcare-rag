@@ -54,6 +54,11 @@ if ($doFrontend) {
     }
     Invoke-Step 'tsc --noEmit' npm @('--prefix', $frontend, 'run', '-s', 'typecheck')
     Invoke-Step 'API types current' npm @('--prefix', $frontend, 'run', '-s', 'gen:api:check')
+    # The Playwright suites and the demo (e2e/) are TypeScript too.
+    $e2e = Get-E2eDir
+    if (Test-Path (Join-Path $e2e 'node_modules')) {
+        Invoke-Step 'tsc (e2e, demo)' npm @('--prefix', $e2e, 'run', '-s', 'typecheck')
+    }
 }
 
 Complete-Steps 'Lint'

@@ -3,7 +3,7 @@
 | Path | Contents | Phase |
 | --- | --- | --- |
 | `docker/` | `api`, `web`, `index` Dockerfiles; `nginx/` site config and security headers | 8 ✅ |
-| `compose/` | `docker-compose.yml`, the observability profile, Prometheus + Grafana provisioning | 8 ✅ |
+| `compose/` | `docker-compose.yml`, the observability profile, Prometheus + Grafana provisioning, alert rules (`observability/alerts.yml` + promtool tests) | 8 ✅ · alerts 12 ✅ |
 | `k8s/` | Kustomize `base/`, `overlays/{local,prod}/`, `components/service-monitor/`, `kind/` | 9 ✅ |
 
 Decisions: [ADR-0014](../docs/adr/0014-container-images-and-compose.md) (images, Compose),
@@ -33,7 +33,7 @@ the build needs, pass flags to every build with `DOCKER_BUILD_ARGS` (e.g.
 ```bash
 scripts/docker-up.sh                    # build, start, seed admin, smoke test → http://localhost:8080
 scripts/docker-up.sh --demo             # + reviewer/user accounts and a week of history (APP_ENV=staging)
-scripts/docker-up.sh --observability    # + Prometheus :9090 and Grafana :3000
+scripts/docker-up.sh --observability    # + Prometheus :9090 (alerts at /alerts) and Grafana :3000
 scripts/docker-logs.sh api --follow
 scripts/docker-rebuild.sh               # after code changes; data kept
 scripts/docker-down.sh [--volumes]      # --volumes deletes the database
@@ -97,7 +97,7 @@ Jobs: db-migrate (before rollout) · db-seed (local only)
 | History | `kubectl -n healthcare-rag rollout history deployment/api` |
 | Which index is served | `curl http://localhost:8088/readyz` (`index_version`) |
 | Restart without downtime | `kubectl -n healthcare-rag rollout restart deployment/api deployment/web` |
-| Scrape metrics | add `components/service-monitor` (Prometheus Operator); label the monitoring namespace `healthcare-rag/monitoring=true` |
+| Scrape metrics and alert | add `components/service-monitor` (Prometheus Operator: ServiceMonitor + PrometheusRule with the 7 alerts of RUNBOOK §6.2); label the monitoring namespace `healthcare-rag/monitoring=true` |
 
 After an index rollout the dashboard's "active index" follows the deployment (audited as
 `index.activate`, reason `deployment`). Activating, from the dashboard, a version whose

@@ -1,10 +1,15 @@
-# Evaluation Report — Phase 4 (Retrieval, Validation, Threshold Tuning)
+# Evaluation Report: final (Phase 12)
 
-- **Date:** 2026-11-12 · **Index:** `6ce73ffaf982` (corpus v2, 72 documents, 346 chunks)
-- **Plan ref:** `plan.md` §4 Phase 4 · ADR-0001 (relevance), ADR-0002 (confidence)
-- **Reproduce:** `scripts/eval.sh --split dev` (any time) · the test split is run once per
-  frozen configuration (§5). Raw outputs: `backend/evaluation/reports/<run>/` (not committed);
-  archived results: [`docs/evaluation/`](evaluation/).
+- **Status:** final. These are the numbers submitted with the project. They were produced
+  in Phase 4 (2026-11-12) and **re-run unchanged in Phase 12 (2026-11-20)**. Nothing
+  after Phase 4 changed retrieval, generation, validation or their configuration, and
+  `scripts/reproduce.sh` checks this on every run (§9).
+- **Index:** `6ce73ffaf982` (corpus v2, 72 documents, 346 chunks) · **Configuration:** BM25
+  + query expansion; confidence weights (0.20, 0.60, 0.20); τ = 0.6; retrieval floor 0.15.
+- **Plan ref:** `plan.md` §4 Phases 4 and 12 · ADR-0001 (relevance), ADR-0002 (confidence)
+- **Reproduce:** `scripts/reproduce.sh --quick` (metrics in about 3 minutes) or
+  `scripts/eval.sh --split dev|test`. Raw outputs: `backend/evaluation/reports/<run>/`
+  (not committed); archived results: [`docs/evaluation/`](evaluation/).
 
 ## 1. Summary
 
@@ -180,3 +185,24 @@ deliverable "list of low-confidence queries for analyst review" (brief D4).
    (d) optionally an offline entailment model as a secondary check (ADR-0002 option C).
 4. **SC2 reading** needs a mentor decision: literal P@5 versus P@5 relative to the
    ceiling (ADR-0001).
+
+## 9. Reproducing these numbers
+
+| What | Command | Expected |
+| --- | --- | --- |
+| Everything below, compared with the records, plus the submission bundle | `scripts/reproduce.sh` (`--quick` = metrics only) | `RESULTS.md` with "Reproduced exactly: yes" |
+| SC1 | `scripts/verify-determinism.sh --runs 3` | `PASS 3 builds byte-identical · index_version 6ce73ffaf982` |
+| Dev pool | `scripts/eval.sh --split dev` | equals `backend/evaluation/baseline.json` |
+| Held-out test-v2 | `scripts/eval.sh --split test` | equals `docs/evaluation/test-v2-results.json` |
+
+Re-running the held-out split with the frozen configuration only recomputes the
+recorded numbers. Using it to choose a configuration would spend it (§5).
+
+**Phase 12 re-run (2026-11-20, fresh index build):** dev P@5 0.602, Hit@5 0.992, pass
+rate 0.926, false validations 0 / 22. Test-v2 P@5 0.417 (ceiling 0.583), Hit@5 0.952,
+pass rate 0.807, false validations 2 / 12. These equal the records to four decimals,
+bootstrap intervals included (fixed seed).
+
+**Serving performance** (not a quality metric, recorded for completeness): `/qa` p95
+179 ms under 50 virtual users for 5 minutes with 0% errors (Phase 7, k6); about 17 ms
+for a single request.

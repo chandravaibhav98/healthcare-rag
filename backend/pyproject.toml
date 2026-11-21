@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Citation-first, evidence-validated RAG over (synthetic) healthcare guidelines."
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
-license = { text = "Proprietary" }
+license = { text = "MIT" }
 # Direct runtime dependencies are pinned exactly; uv.lock pins the full tree.
 # Dependencies are added in the phase that first uses them.
 dependencies = [

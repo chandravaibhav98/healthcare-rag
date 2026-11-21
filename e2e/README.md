@@ -7,7 +7,7 @@ Browser and load tests. One npm package (`package.json`), installed by `scripts/
 | `tests/` | Playwright functional E2E + the axe-core accessibility gate | 7 ✅ |
 | `load/` | k6 load test of `/qa` (`qa.js`) | 7 ✅ |
 | `audit/` | `ui-audit.mjs`: the Phase 6 exit check (screens + axe + Lighthouse) | 6 ✅ |
-| `demo/` | Recorded demo | 11 |
+| `demo/` | The narrated demo video: `demo.spec.ts`, caption/pointer overlay (`captions.ts`), chapter writer (`chapters.mjs`) | 11 ✅ |
 
 ## Functional E2E (`tests/`)
 
@@ -35,6 +35,41 @@ the production build of the SPA on :4180 (`vite preview`, proxying `/api`). Acco
 Selectors use `data-testid` only. Workers: 1 (the specs share one database). CI retries
 once and keeps traces and videos of failures; `npm --prefix e2e run report` opens the
 HTML report.
+
+## Demo video (`demo/`)
+
+```bash
+scripts/demo-record.sh            # cold start → artifacts/demo/healthcare-rag-demo-<UTC>.mp4
+scripts/demo-record.sh --gif      # plus a 12-second GIF teaser
+scripts/demo-record.sh --target http://localhost:8080 --password <SEED_ADMIN_PASSWORD>   # a running stack
+npm --prefix e2e run demo         # just the Playwright run (webm under e2e/test-results/)
+```
+
+One test, ten `test.step` chapters, recorded at 1920×1080 by the `demo` project of
+`playwright.config.ts` (video always on, `slowMo` 120 ms; the `e2e` project keeps video
+only for failures). `captions.ts` injects a caption banner, a visible mouse pointer with
+click ripples, and a spotlight outline, all `pointer-events: none` and `aria-hidden`. The
+demo still asserts every outcome it shows, so a broken build fails instead of producing a
+misleading video.
+
+`demo-record` builds the index from `corpus/`, lets Playwright start a fresh seeded API
+on it with a second index version to activate (`E2E_CANDIDATE_INDEX=1`), checks the API
+serves the index it built, and converts the `.webm` to H.264 MP4 (`-preset veryfast`,
+CRF 20) with chapter markers. The chapter list is also written as text
+(`demo-chapters.txt`). Needs ffmpeg with libx264 (`winget install Gyan.FFmpeg`).
+
+| Chapter | Shows |
+| --- | --- |
+| 1 | Assistant, synthetic-corpus disclaimer |
+| 2 | PPE question → validated, confidence meter and signal breakdown, citations |
+| 3 | Evidence panel: shared words highlighted, numeric check |
+| 4 | Cold-chain question → validated from WHO, CDC and NIH sources |
+| 5 | Out-of-scope clinical question → needs review, escalated |
+| 6 | Admin sign-in, Overview KPIs |
+| 7 | Review queue: approve the abstention, promote to the gold set |
+| 8 | Evaluation: P@5 / pass-rate trend, threshold sweep, run an evaluation |
+| 9 | Index versions: activate the candidate, roll back |
+| 10 | Settings: raise the threshold (impact preview), change appears in the audit log |
 
 ## Load test (`load/qa.js`)
 

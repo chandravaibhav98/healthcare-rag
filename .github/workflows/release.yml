@@ -9,6 +9,8 @@
 #            create a GitHub Release with the manifest, SBOMs and notes.
 #   cleanup  after publish: delete untagged GHCR versions beyond the newest 20 (tagged
 #            images, release tags and signatures are never touched).
+#   demo     after release: record the narrated demo video (demo.yml, Phase 11) and
+#            attach the MP4, GIF teaser and chapter list to the GitHub Release.
 #
 # Every action is pinned to a commit SHA; Syft and Cosign are checksum-verified binaries.
 name: release
@@ -177,3 +179,12 @@ jobs:
           gh release create "$TAG" --verify-tag "${pre[@]}" --title "$TAG" \
             --notes-file notes.md --generate-notes \
             "healthcare-rag-$TAG.yaml" release-manifest.json sbom-*.spdx.json
+
+  demo:
+    name: demo video for ${{ github.ref_name }}
+    needs: release
+    permissions:
+      contents: write # attach the video to the release
+    uses: ./.github/workflows/demo.yml
+    with:
+      release_tag: ${{ github.ref_name }}

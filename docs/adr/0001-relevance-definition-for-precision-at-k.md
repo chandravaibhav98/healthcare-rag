@@ -1,6 +1,8 @@
 # ADR-0001 — Relevance definition for Precision@K
 
-- **Status:** Proposed. **Approval required before Phase 0 can close** (readiness Q1)
+- **Status:** Proposed. **Approval required** (readiness Q1). Implemented since Phase 1; the
+  Phase 4 evidence and the final numbers are in `docs/evaluation-report.md` §3.1. Owner
+  recommendation (Phase 12): accept. The open choice is how SC2 is read (technical summary §5)
 - **Date:** 2026-11-07
 - **Deciders:** project owner (proposer), mentor or stakeholder (approver)
 - **Plan ref:** `plan.md` §3 ADR-001, §4 Phase 4

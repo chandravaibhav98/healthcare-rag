@@ -10,6 +10,9 @@ spec:
     - port: http
       path: /metrics
       interval: 30s
+      # Same job name as the Compose profile, so one set of alert rules fits both.
+      relabelings:
+        - { action: replace, targetLabel: job, replacement: rag-api }
 ---
 # /metrics is not routed by the gateway; only the monitoring namespace may scrape it.
 apiVersion: networking.k8s.io/v1

@@ -14,7 +14,7 @@ function Show-Usage {
 Usage: scripts/setup.ps1 [--ci] [--skip-playwright] [--skip-hooks] [--no-verify] [-h|--help]
 
   --ci               Non-interactive CI mode: plain output, no .env, no git hooks
-  --skip-playwright  Do not install Playwright browsers
+  --skip-playwright  Do not install Playwright browsers (and skip the E2E suite in verify)
   --skip-hooks       Do not install the pre-commit git hooks
   --no-verify        Skip the final lint + test run
 '@ | Write-Host
@@ -67,12 +67,13 @@ if ($SkipHooks) {
     Write-Warn 'not a Git repository; skipping hook installation'
 }
 
-Write-Step '6/7 Playwright browsers'
+Write-Step '6/7 e2e dependencies + Playwright browsers'
+# e2e/ dependencies are always installed: lint type-checks the suites and the demo.
+$e2e = Get-E2eDir
+if (-not (Invoke-Native npm @('ci', '--prefix', $e2e, '--no-audit', '--no-fund'))) { Stop-Script 'npm ci (e2e) failed' }
 if ($SkipPlaywright) {
-    Write-Info 'skipped (--skip-playwright)'
+    Write-Info 'browsers skipped (--skip-playwright); the E2E suite is left out of the verify step'
 } else {
-    $e2e = Get-E2eDir
-    if (-not (Invoke-Native npm @('ci', '--prefix', $e2e, '--no-audit', '--no-fund'))) { Stop-Script 'npm ci (e2e) failed' }
     # --with-deps installs OS libraries (sudo on Linux), so only CI asks for it.
     $pwArgs = @('--prefix', $e2e, 'exec', '--', 'playwright', 'install') + $(if ($CiMode) { @('--with-deps', 'chromium') } else { @('chromium') })
     if (-not (Invoke-Native npm $pwArgs)) { Stop-Script 'playwright install failed' }
@@ -83,7 +84,9 @@ if ($Verify) {
     Write-Step '7/7 Verify: lint + tests'
     & pwsh -NoProfile -File (Join-Path $root 'scripts/lint.ps1') @CiFlag
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-    & pwsh -NoProfile -File (Join-Path $root 'scripts/test.ps1') --all @CiFlag
+    # Without browsers (--skip-playwright) the E2E suite cannot run: CI runs it in its own job.
+    $testScope = if ($SkipPlaywright) { @('--backend', '--frontend') } else { @('--all') }
+    & pwsh -NoProfile -File (Join-Path $root 'scripts/test.ps1') @testScope @CiFlag
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 } else {
     Write-Step '7/7 Verify: skipped (--no-verify)'

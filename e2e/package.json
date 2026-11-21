@@ -3,13 +3,15 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Playwright functional E2E (Phase 7), browser accessibility audit (Phase 6) and k6 load script (Phase 7).",
+  "description": "Playwright functional E2E (Phase 7), recorded demo (Phase 11), browser accessibility audit (Phase 6) and k6 load script (Phase 7).",
   "engines": {
     "node": ">=22.12.0"
   },
   "scripts": {
-    "test": "playwright test",
-    "test:headed": "playwright test --headed",
+    "test": "playwright test --project=e2e",
+    "test:headed": "playwright test --project=e2e --headed",
+    "demo": "playwright test --project=demo --reporter=list",
+    "typecheck": "tsc -p .",
     "report": "playwright show-report",
     "audit": "node audit/ui-audit.mjs",
     "install-browsers": "playwright install chromium"

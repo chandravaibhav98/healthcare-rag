@@ -1,6 +1,7 @@
 # ADR-0007 — Abstention response policy (patient-safety posture)
 
-- **Status:** Proposed (implemented in Phase 3; reviewer storage in Phase 5)
+- **Status:** Accepted (Phase 12). Implemented in Phase 3; reviewer storage in Phase 5; shown
+  in the assistant (Phase 6) and the demo (Phase 11)
 - **Date:** 2026-11-07
 - **Plan ref:** `plan.md` §3 ADR-007 · **Affects:** SC3, D3
 

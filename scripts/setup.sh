@@ -7,7 +7,7 @@
 #   3. backend       uv sync --locked   (exact versions from backend/uv.lock)
 #   4. frontend      npm ci             (exact versions from frontend/package-lock.json)
 #   5. git hooks     pre-commit install (skipped with --ci / --skip-hooks)
-#   6. playwright    e2e/ dependencies + Chromium (system deps too with --ci)
+#   6. playwright    e2e/ dependencies (always) + Chromium (system deps too with --ci)
 #   7. verify        scripts/lint.sh + scripts/test.sh (skip with --no-verify)
 #
 # Idempotent: safe to re-run at any time. Parity: scripts/setup.ps1.
@@ -20,7 +20,7 @@ usage() {
 Usage: scripts/setup.sh [--ci] [--skip-playwright] [--skip-hooks] [--no-verify] [-h|--help]
 
   --ci               Non-interactive CI mode: plain output, no .env, no git hooks
-  --skip-playwright  Do not install Playwright browsers
+  --skip-playwright  Do not install Playwright browsers (and skip the E2E suite in verify)
   --skip-hooks       Do not install the pre-commit git hooks
   --no-verify        Skip the final lint + test run
 USAGE
@@ -71,11 +71,12 @@ else
   log_warn "not a Git repository; skipping hook installation"
 fi
 
-log_step "6/7 Playwright browsers"
+log_step "6/7 e2e dependencies + Playwright browsers"
+# e2e/ dependencies are always installed: lint type-checks the suites and the demo.
+run npm ci --prefix "$E2E_DIR" --no-audit --no-fund
 if ((SKIP_PLAYWRIGHT)); then
-  log_info "skipped (--skip-playwright)"
+  log_info "browsers skipped (--skip-playwright); the E2E suite is left out of the verify step"
 else
-  run npm ci --prefix "$E2E_DIR" --no-audit --no-fund
   # --with-deps installs OS libraries via the package manager (sudo on Linux), so only
   # CI asks for it; locally, CHROME_PATH can point at an existing Chrome instead.
   PW_ARGS=(chromium)
@@ -87,7 +88,12 @@ fi
 if ((VERIFY)); then
   log_step "7/7 Verify: lint + tests"
   bash "$REPO_ROOT/scripts/lint.sh" "${CI_FLAG[@]}"
-  bash "$REPO_ROOT/scripts/test.sh" --all "${CI_FLAG[@]}"
+  # Without browsers (--skip-playwright) the E2E suite cannot run: CI runs it in its own job.
+  if ((SKIP_PLAYWRIGHT)); then
+    bash "$REPO_ROOT/scripts/test.sh" --backend --frontend "${CI_FLAG[@]}"
+  else
+    bash "$REPO_ROOT/scripts/test.sh" --all "${CI_FLAG[@]}"
+  fi
 else
   log_step "7/7 Verify: skipped (--no-verify)"
 fi

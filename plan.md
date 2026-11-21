@@ -617,13 +617,21 @@ tag:   release notes → prod overlay manifests rendered as an artifact
 
 **Deliverables checklist**
 
-- [ ] `playwright.config.ts` with `e2e` and `demo` projects
-- [ ] `e2e/demo/captions.ts` helper (`showCaption(page, text, ms)`)
-- [ ] `demo.spec.ts` built from `test.step` blocks with paced waits
-- [ ] `scripts/demo-record.*`: seed → run the demo project → find the `.webm` → convert to `artifacts/demo/healthcare-rag-demo-<timestamp>.mp4`
-- [ ] Optional: chapter markers file (`demo-chapters.txt`) and a GIF teaser
+- [x] `playwright.config.ts` with `e2e` and `demo` projects
+- [x] `e2e/demo/captions.ts` helper (`showCaption(page, text, ms)`, plus a visible pointer and `spotlight()`)
+- [x] `demo.spec.ts` built from `test.step` blocks with paced waits
+- [x] `scripts/demo-record.*`: seed → run the demo project → find the `.webm` → convert to `artifacts/demo/healthcare-rag-demo-<timestamp>.mp4`
+- [x] Optional: chapter markers file (`demo-chapters.txt`) and a GIF teaser
 
 **Exit criteria:** a single script produces the MP4 from a cold start.
+
+**Status (2026-11-20):** ✅ done.
+- `scripts/demo-record.sh`, from nothing running, builds the index, starts a fresh
+  seeded stack, records 10 narrated chapters, and writes an H.264 1920×1080 MP4 with
+  chapter markers, a chapter list and a GIF teaser.
+- The demo asserts every outcome it shows.
+- `release.yml` attaches the video to each GitHub Release (`demo.yml`).
+- See `docs/project/phase-11-report.md`.
 
 ---
 
@@ -631,20 +639,28 @@ tag:   release notes → prod overlay manifests rendered as an artifact
 
 **Deliverables checklist**
 
-- [ ] **README.md:** purpose, disclaimer, architecture diagram, quick start (local, Docker, k8s), configuration table, script index, metrics snapshot
-- [ ] **RUNBOOK.md:**
-  - [ ] Deploy, upgrade, rollback (app and index separately)
-  - [ ] **Swapping in a secure real guideline repository:** implement the `DocumentSource` protocol (gateway, S3/Blob, SharePoint), authentication via workload identity, document-level ACL metadata and **retrieval-time access filtering**, re-annotating the gold set, re-tuning the threshold, a validation sign-off checklist
-  - [ ] Treating retrieved text as **data, not instructions** (prompt-injection posture, relevant if the LLM generator is enabled)
-  - [ ] Operations: alerts (abstention spike, latency, readiness failures), log queries, PHI-redaction verification, retention
-  - [ ] Scaling path: when to move from `IndexFlatIP` to IVF/HNSW or an external vector database
-- [ ] `docs/architecture.md`, `docs/api.md` (with examples), finalised ADRs
-- [ ] `docs/evaluation-report.md` (final numbers, confidence intervals, ablations, limitations)
-- [ ] **`docs/technical-summary.md`** (2–3 pages for stakeholders: problem, approach, results against criteria, risks, next steps)
-- [ ] Submission bundle: tagged release, images, evaluation logs, low-confidence list, demo MP4, Playwright report
-- [ ] Final review checklist: fresh-clone test on Linux and Windows, all scripts working, no secrets in history, licence and third-party notices
+- [x] **README.md:** purpose, disclaimer, architecture diagram, quick start (local, Docker, k8s), configuration table, script index, metrics snapshot
+- [x] **RUNBOOK.md:**
+  - [x] Deploy, upgrade, rollback (app and index separately)
+  - [x] **Swapping in a secure real guideline repository:** implement the `DocumentSource` protocol (gateway, S3/Blob, SharePoint), authentication via workload identity, document-level ACL metadata and **retrieval-time access filtering**, re-annotating the gold set, re-tuning the threshold, a validation sign-off checklist (the `DocumentSource` seam is implemented and tested; ACL filtering is designed, OI-42)
+  - [x] Treating retrieved text as **data, not instructions** (prompt-injection posture, relevant if the LLM generator is enabled)
+  - [x] Operations: alerts (abstention spike, latency, readiness failures), log queries, PHI-redaction verification, retention (7 alert rules, unit-tested with promtool, shipped for Compose and the Prometheus Operator)
+  - [x] Scaling path: when to move from `IndexFlatIP` to IVF/HNSW or an external vector database
+- [x] `docs/architecture.md`, `docs/api.md` (with examples), finalised ADRs (all accepted except ADR-0001/0002, which await mentor sign-off)
+- [x] `docs/evaluation-report.md` (final numbers, confidence intervals, ablations, limitations)
+- [x] **`docs/technical-summary.md`** (2–3 pages for stakeholders: problem, approach, results against criteria, risks, next steps)
+- [x] Submission bundle: tagged release, images, evaluation logs, low-confidence list, demo MP4, Playwright report (`scripts/reproduce.*` builds it locally; a `v*` tag publishes images, manifests, SBOMs and the demo)
+- [x] Final review checklist: fresh-clone test on Linux and Windows, all scripts working, no secrets in history, licence and third-party notices (Windows run by the owner: `docs/project/phase-12-report.md` §3)
 
 **Exit criteria:** a reviewer can reproduce every metric and the demo from a fresh clone using only `scripts/`.
+
+**Status (2026-11-20):** ✅ done.
+- From a fresh clone, `scripts/setup.sh` then `scripts/reproduce.sh` re-derive SC1–SC4
+  and both evaluation splits, equal to their records. They also run the E2E suite,
+  record the demo video and write the submission bundle.
+- Final docs: README, RUNBOOK, architecture, API, evaluation report, technical summary.
+- MIT licence and third-party notices; no secrets in the history.
+- See `docs/project/phase-12-report.md`.
 
 ---
 
@@ -660,7 +676,9 @@ tag:   release notes → prod overlay manifests rendered as an artifact
 | Script | Purpose | Key flags |
 | --- | --- | --- |
 | `setup` | Check prerequisites (uv, node, docker, kubectl, kind, ffmpeg), create environments, install Playwright browsers, copy `.env` | `--skip-playwright`, `--ci` |
+| `preflight` | Read-only toolchain and repository hygiene check | — |
 | `reset-env` | Remove `.venv`, `node_modules`, `artifacts/` and caches, then re-run setup | `--keep-db`, `--yes` |
+| `github-protect` | Apply the branch and tag rulesets with the GitHub CLI (Phase 10) | `--repo`, `--dry-run` |
 | `build-index` | Run `pipeline.py build` and print the manifest | `--corpus`, `--out`, `--embedder hashing\|svd` |
 | `verify-determinism` | Build twice in temporary directories and compare all hashes | `--runs N` |
 | `dev` | Run the API (uvicorn reload) and web (Vite) together | `--api-only`, `--web-only` |
@@ -669,15 +687,16 @@ tag:   release notes → prod overlay manifests rendered as an artifact
 | `test` | Run the chosen test layers | `--backend --frontend --e2e --all --coverage` |
 | `eval` | Retrieval and validation evaluation plus threshold sweep, writing a report | `--split dev\|test`, `--threshold` |
 | `load-test` | k6 against `/qa` | `--vus`, `--duration`, `--target`, `--port`, `--p95` |
-| `lint` / `format` | ruff, mypy, eslint, prettier, tsc | `--fix` |
+| `lint` | ruff, mypy, eslint, prettier, tsc; formatting is `lint --fix` (no separate `format` script) | `--fix` |
 | `gen-client` | Export OpenAPI and regenerate TS types | — |
 | `docker-up` / `docker-down` / `docker-rebuild` / `docker-logs` | Compose lifecycle | `--demo`, `--observability`, `--volumes`, `--no-cache` |
 | `k8s-up` / `k8s-down` / `k8s-status` / `k8s-port-forward` | kind cluster plus Kustomize lifecycle | `--overlay local\|prod`, `--recreate` |
 | `k8s-verify` | Rolling restart and index rollout/rollback under k6 load: zero failed requests | `--vus`, `--duration`, `--skip-restart`, `--skip-index` |
-| `e2e` | Playwright functional suite | `--headed`, `--target local\|docker\|k8s` |
+| `test --e2e` | Playwright functional suite (folded into `test`; other stacks via `E2E_BASE_URL`, e2e/README) | `--e2e` |
 | `demo-record` | Seed, record the demo, convert to MP4 | `--target`, `--keep-webm` |
 | `smoke` | Hit `/healthz`, `/readyz` and a sample `/qa` | `--base-url` |
 | `security-scan` | pip-audit, npm audit, bandit, trivy, gitleaks | `--images`, `--strict`, `--only` |
+| `reproduce` | Every metric, E2E and the demo from a fresh clone, compared with the records; submission bundle (Phase 12) | `--quick`, `--skip-e2e`, `--skip-demo` |
 | `clean` | Remove build outputs and reports | `--all` |
 
 ---
@@ -798,7 +817,7 @@ owning phase · 🟢 tracked, low risk
 | OI-25 | `/admin/stats` aggregates in Python from one windowed query; fine to about 1M rows per window, then move to SQL aggregates or a daily rollup table | When volume requires | 🟢 |
 | OI-26 | Windows CI cannot run Linux containers, so the PostgreSQL test variants run on Linux only (SQLite runs on both) | Phase 10 | 🟢 |
 | OI-30 | The SPA bundle (gzip): 63 kB app + 78 kB React + 37 kB forms; dashboard adds 13 kB + 118 kB charts. Fine for an internal tool; measure on a slow profile before any public deployment | Phase 8 (nginx caching) or before a public deployment | 🟢 |
-| OI-31 | **The Phase 7–10 CI and release jobs have not run on GitHub yet.** Every gate ran locally (Windows Git Bash VM) or in a Linux sandbox with the same commands, `actionlint` passes, and publish/release were simulated against a local registry; the first push (and first `v*` tag) confirms the exit criteria | Owner, on push | 🟠 |
+| OI-31 | **The Phase 7–10 CI and release jobs have not been confirmed on GitHub.** Phase 12 found that `setup --skip-playwright` (used by the `quality` job) failed its own verify step since Phase 7, so `quality` and `ci-passed` were most likely red; fixed in Phase 12 (report §4). Every gate ran locally (Windows Git Bash VM) or in a Linux sandbox with the same commands, `actionlint` passes, and publish/release were simulated against a local registry; the first push (and first `v*` tag) confirms the exit criteria | Owner, on push | 🟠 |
 | OI-32 | Trivy's vulnerability database could not be downloaded in the verification sandbox (registry blocked), so `trivy fs` was verified for misconfiguration only; its lockfile CVE scan first runs in CI. pip-audit and npm audit cover the same lockfiles and are clean | CI first run | 🟢 |
 | OI-33 | Trivy **image** scanning is wired (`security-scan --images`, CI `images` job: no fixable CRITICAL) but, like OI-32, its vulnerability database cannot be downloaded in the sandbox: first real run in CI | CI first run | 🟢 |
 | OI-35 | Base images (`python:3.12-slim`, `node:26-slim`, `nginx-unprivileged:1.30-alpine`, `busybox:1.37`, `postgres:18-alpine`) and the scanner fallbacks are referenced by tag; k6's fallback is `grafana/k6:latest` unless `K6_IMAGE` is set. Dependabot (Phase 10) now proposes tag updates; pin by digest as well | Phase 12 hardening | 🟢 |
@@ -806,6 +825,8 @@ owning phase · 🟢 tracked, low risk
 | OI-38 | No egress NetworkPolicies: the API may open any outbound connection. In prod, restrict to DNS, the database and the OTLP endpoint once their addresses are known | Phase 12 (RUNBOOK) / platform team | 🟢 |
 | OI-39 | **Branch protection needs a plan that supports it.** Rulesets (`.github/rulesets/`, `scripts/github-protect.*`) apply to public repositories on GitHub Free; a private repository needs Pro, Team or Enterprise. Until then `ci-passed` reports on every PR but does not block a merge | Owner: make public or upgrade | 🟠 |
 | OI-40 | Actions budget: a full CI run bills roughly 3 hours (Windows counts double); a private repository on Free gets 2,000 minutes and 500 MB storage a month (about 10–12 full runs; the 200 MB `images` artifact is kept 1 day). Public repositories: unlimited | Owner (same decision as OI-39) | 🟢 |
+| OI-41 | The demo recording changes data (a review, a settings version, an evaluation run, an index activation and rollback), so `demo-record --target` must point at a disposable stack; the default cold start is always disposable | Documented (`--help`, e2e/README) | 🟢 |
+| OI-42 | Document-level access control is designed (RUNBOOK §4.6) but not built: the synthetic corpus is public. **Required before any restricted document is indexed** | Before the real-repository pilot | 🟠 |
 | OI-36 | Schemathesis' pytest plugin does not support pytest 9, so the contract tests use its Python API inside parametrized tests. Switch back if the plugin catches up | Dependency updates | 🟢 |
 
 Closed in Phase 4 (outcomes in `docs/project/phase-4-report.md` §4): OI-3, OI-4, OI-5,

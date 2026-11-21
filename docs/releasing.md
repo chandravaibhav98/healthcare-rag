@@ -83,6 +83,9 @@ The `release` job:
 4. creates the GitHub Release with that manifest, `release-manifest.json`, the three
    SBOMs and notes (digests plus the evaluation baseline), followed by GitHub's generated
    changelog. Tags with a hyphen (`v1.1.0-rc.1`) become pre-releases.
+5. records the narrated demo on a clean runner (`demo.yml`, Phase 11) and attaches
+   `healthcare-rag-demo-<tag>.mp4`, a GIF teaser and the chapter list to the release.
+   Run it at any time from Actions → demo → Run workflow.
 
 `v*` tags cannot be moved or deleted (ruleset). To fix a release, cut a new version.
 

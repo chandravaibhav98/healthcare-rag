@@ -2,7 +2,7 @@
 # -----------------------------------------------------------------------------
 # lint.sh: static checks (the same ones CI and pre-commit run).
 #   backend : ruff check · ruff format --check · mypy --strict · contract snapshots
-#   frontend: eslint · prettier --check · tsc --noEmit
+#   frontend: eslint · prettier --check · tsc --noEmit (frontend and e2e/)
 # Runs every check and then reports all failures. Parity: scripts/lint.ps1.
 # -----------------------------------------------------------------------------
 set -euo pipefail
@@ -59,6 +59,10 @@ if ((DO_FRONTEND)); then
   fi
   run_step "tsc --noEmit" npm --prefix "$FRONTEND_DIR" run -s typecheck
   run_step "API types current" npm --prefix "$FRONTEND_DIR" run -s gen:api:check
+  # The Playwright suites and the demo (e2e/) are TypeScript too.
+  if [[ -d "$E2E_DIR/node_modules" ]]; then
+    run_step "tsc (e2e, demo)" npm --prefix "$E2E_DIR" run -s typecheck
+  fi
 fi
 
 finish_steps "Lint"

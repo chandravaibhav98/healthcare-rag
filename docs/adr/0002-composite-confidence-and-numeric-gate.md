@@ -1,7 +1,8 @@
 # ADR-0002 — Composite confidence score with a numeric-consistency gate
 
 - **Status:** Proposed. **Approval required** (readiness Q2). Implemented in Phase 3 as
-  revised below.
+  revised below; final numbers in `docs/evaluation-report.md`. Owner recommendation
+  (Phase 12): accept
 - **Date:** 2026-11-07 · **Revised:** 2026-11-12 (Revision 1: Phase 3 evidence; Revision 2: Phase 4 tuning)
 - **Deciders:** project owner (proposer), mentor or stakeholder (approver)
 - **Plan ref:** `plan.md` §2.2, §3 ADR-002, §4 Phases 3–4

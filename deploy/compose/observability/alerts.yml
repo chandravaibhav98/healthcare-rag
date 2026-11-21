@@ -1,0 +1,82 @@
+# Alert rules for the RAG API (Phase 12, RUNBOOK §6.1). One source of truth: the
+# Kubernetes PrometheusRule (deploy/k8s/components/service-monitor/prometheus-rule.yaml)
+# carries the same groups; backend/tests/unit/test_alert_rules.py fails if they drift.
+# Unit tests: alerts.test.yml (`promtool test rules alerts.test.yml`, run by CI).
+#
+# Every alert names its RUNBOOK section in `runbook`. Thresholds are starting points for a
+# pilot; revisit them after two weeks of real traffic.
+groups:
+  - name: rag-api
+    rules:
+      - alert: RagApiDown
+        expr: up{job="rag-api"} == 0
+        for: 2m
+        labels: { severity: page }
+        annotations:
+          summary: "RAG API target {{ $labels.instance }} is not scraping"
+          runbook: "RUNBOOK.md §6.2 RagApiDown"
+
+      - alert: RagNotReady
+        # /readyz answers 503 when the index is not loaded or the database is unreachable.
+        expr: sum(rate(http_requests_total{route="/readyz",status_code="503"}[5m])) > 0
+        for: 5m
+        labels: { severity: page }
+        annotations:
+          summary: "/readyz has been failing for 5 minutes (index or database)"
+          runbook: "RUNBOOK.md §6.2 RagNotReady"
+
+      - alert: RagAbstentionSpike
+        # Share of answers withheld. The Phase 4 dev pool abstains on about 20 %; a jump
+        # usually means a bad index, a config change or a new kind of question.
+        expr: |
+          (
+            sum(rate(qa_requests_total{status="needs_review"}[15m]))
+            / sum(rate(qa_requests_total[15m]))
+          ) > 0.5
+          and sum(rate(qa_requests_total[15m])) > 0.05
+        for: 15m
+        labels: { severity: ticket }
+        annotations:
+          summary: "{{ $value | humanizePercentage }} of answers withheld over 15 minutes"
+          runbook: "RUNBOOK.md §6.2 RagAbstentionSpike"
+
+      - alert: RagQaLatencyHigh
+        # Plan Phase 7 gate: p95 < 300 ms.
+        expr: |
+          histogram_quantile(0.95, sum by (le) (rate(qa_latency_seconds_bucket[5m]))) > 0.3
+          and sum(rate(qa_latency_seconds_count[5m])) > 0.05
+        for: 10m
+        labels: { severity: ticket }
+        annotations:
+          summary: "/qa p95 latency {{ $value | humanizeDuration }} (target < 300 ms)"
+          runbook: "RUNBOOK.md §6.2 RagQaLatencyHigh"
+
+      - alert: RagServerErrors
+        expr: |
+          (
+            sum(rate(http_requests_total{status_code=~"5.."}[5m]))
+            / sum(rate(http_requests_total[5m]))
+          ) > 0.01
+          and sum(rate(http_requests_total[5m])) > 0.05
+        for: 5m
+        labels: { severity: page }
+        annotations:
+          summary: "{{ $value | humanizePercentage }} of HTTP requests are 5xx"
+          runbook: "RUNBOOK.md §6.2 RagServerErrors"
+
+      - alert: RagQueryLogDropped
+        # The audit trail is losing rows (writer queue full or database errors).
+        expr: increase(qa_log_dropped_total[10m]) > 0
+        labels: { severity: ticket }
+        annotations:
+          summary: "{{ $value }} query-log rows dropped in 10 minutes"
+          runbook: "RUNBOOK.md §6.2 RagQueryLogDropped"
+
+      - alert: RagIndexVersionSplit
+        # Pods serve different indexes for longer than a rollout takes.
+        expr: count(count by (index_version) (rag_index_info)) > 1
+        for: 15m
+        labels: { severity: ticket }
+        annotations:
+          summary: "{{ $value }} index versions are being served at once"
+          runbook: "RUNBOOK.md §6.2 RagIndexVersionSplit"

@@ -16,6 +16,7 @@ services:
       - --storage.tsdb.retention.time=7d
     volumes:
       - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./observability/alerts.yml:/etc/prometheus/alerts.yml:ro
       - prometheus:/prometheus
     networks: [backend, observability]
     ports:
