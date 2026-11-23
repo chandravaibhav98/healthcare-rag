@@ -132,6 +132,9 @@ load_images() {
   if [[ "$K8S_CONTEXT" == kind-* ]]; then
     local cluster="${K8S_CONTEXT#kind-}"
     for img in "$@"; do
+      # Third-party images (postgres) are not built here: pull them first, or `kind load`
+      # fails with "not present locally" on a clean CI runner (manual test F-24).
+      docker image inspect "$img" >/dev/null 2>&1 || run docker pull "$img"
       if ! run kind load docker-image --name "$cluster" "$img"; then
         # Docker's containerd image store keeps only the local platform of a pulled
         # multi-platform image (e.g. postgres:18-alpine), but `docker save` still writes

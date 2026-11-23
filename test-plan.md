@@ -32,7 +32,7 @@ q() { curl -s -X POST "$API/api/v1/qa" -H 'Content-Type: application/json' \
 | P0-03 | `scripts/preflight.sh --strict` | Every prerequisite shows green, and missing tools are named clearly |
 | P0-04 | `scripts/lint.sh` | ruff, mypy, eslint, prettier and tsc are all clean |
 | P0-05 | `git ls-files --eol corpus \| grep -c crlf` | `0` (this matters for determinism) |
-| P0-06 | Add a line `aws_secret_access_key = AKIAIOSFODNN7EXAMPLE` to any file, then `git add` it and `git commit` | The pre-commit secret scan **blocks** the commit. Then run `git restore --staged . && git checkout -- .` |
+| P0-06 | Add a line `aws_secret_access_key = AKIAIOSFODNN7EXAMPLE` to any file, then `git add` it and `git commit` | The pre-commit secret scan **blocks** the commit. Then run `git restore --staged . && git checkout -- .` | <!-- AWS's documented example key, not a secret. pragma: allowlist secret -->
 | P0-07 | Add `FOO_BAR=1` to `.env.example`, then `cd backend && uv run pytest tests/unit/test_config.py` | The test **fails** because config drifted. Revert the line afterwards |
 | P0-08 | `scripts/gen-client.sh --check` | Says the generated TS client matches `backend/openapi.json` |
 | P0-09 | Read ADR-0001 and ADR-0002 in `docs/adr/` | Each has Status, Context, Decision and Consequences, and the numbers match `.env.example` (weights 0.20/0.60/0.20, τ 0.6) |
