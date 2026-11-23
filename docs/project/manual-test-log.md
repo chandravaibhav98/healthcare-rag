@@ -74,7 +74,7 @@ F-02 measured: 1 / 130 answered dev questions (0.8%), downgraded to Low.
 | P6-01…06 | ✅ | disclaimer; validated answer with meter, signals and citation chips; evidence highlighting; abstention + escalate; friendly error with the API down; history and copy |
 | P6-07…15 | ✅ | user → 403 on /admin; reviewer read-only (no Save/Activate/Run, no Audit Log); admin overview KPIs; review queue approve / correct / promote to gold; settings τ change previewed, saved, audited and restored to 0.6; evaluation run completes; keyboard-only navigation; dark mode and 375 px; Index shows 6ce73ffaf982 with no server path (F-11 confirmed in the UI) |
 
-## Phase 7: Test hardening and quality gates (2026-11-23, in progress)
+## Phase 7: Test hardening and quality gates (2026-11-23) ✅
 
 | ID | Result | Evidence |
 | --- | --- | --- |
@@ -83,10 +83,49 @@ F-02 measured: 1 / 130 answered dev questions (0.8%), downgraded to Low.
 | P7-02 | ✅ | Playwright 20/20 in 35 s (a11y on 8 routes, admin, assistant, auth/RBAC) against a disposable seeded stack |
 | P7-05/06 | ✅ | "tests catch regressions", shown by real events during this test run rather than planted bugs: F-03 gate tripped the SC3 regression gates; contract snapshot caught the 1.3.2 bump; warnings-as-errors caught the deprecated `HTTP_422_UNPROCESSABLE_ENTITY`; F-11 path change broke the corrupted-index test |
 | P7-01b | ⚠️ | full backend with coverage: 506 passed, 1 xfailed, TOTAL coverage **97%** (64 files at 100%); **45 errors at setup of every `[postgres]` variant** with Docker running → F-15 |
+| P7-01c | ✅ | after the F-15 fix: `pytest -k postgres` 45 passed in 28.5 s (Testcontainers, postgres:17-alpine) |
 | P7-03 | ✅ | k6 smoke 10 VUs × 30 s: p95 26.5 ms, 0/296 failed. Gate 50 VUs × 5 min: **p95 51.3 ms** (gate 300), p99 73 ms, **0 / 14 635 failed**, 48.6 req/s |
 | P7-04 | ✅ | `security-scan.sh --strict`: pip-audit, npm audit, bandit, gitleaks (Docker), trivy fs (local 0.74.0; not a poisoned 0.69.4–0.69.6 build) all passed, no scanner skipped |
 
 Note: during E2E uvicorn logged "Unsupported upgrade request / no WebSocket library" (a client tried a WebSocket upgrade through the preview proxy). Harmless: the app uses no WebSockets.
+
+## Phase 8: Docker and Compose (2026-11-23) ✅ (F-19 open, awaiting upstream)
+
+| ID | Result | Evidence |
+| --- | --- | --- |
+| P8-01 | ✅ | `docker-up.sh --demo`: first run failed (F-17); after the fix images built, stack healthy, seed ok (62 demo queries); smoke through nginx 7/7 PASS (`/qa` and `/api/v1/qa`, validated and abstain, 422 problem+json) |
+| P8-02 | ✅ | postgres, api, web running (healthy); migrate and indexer exited (0) |
+| P8-03 | ✅ | login through nginx with the generated compose password → 200; `/qa` validated 0.838923 (identical to local dev) |
+| P8-04 | ✅ | non-root: api uid 10001, web uid 101 |
+| P8-05 | ❌ | rag-api **443 MB** by CI's measure (`docker image inspect .Size`, gate < 400 MB; ADR-0014 expected ≈ 350 MB) → F-18. rag-web 98.5 MB, rag-index 8.5 MB |
+| P8-06 | ✅ | `readyz` in Compose reports index 6ce73ffaf982 = the Windows build: **SC1 determinism holds across Windows and the Linux container build** |
+| P8-07 | ✅ | CSP, X-Frame-Options DENY, nosniff, Referrer-Policy no-referrer through nginx; favicon present in the built web image (F-13 shipped) |
+| P8-08 | ✅ | `docker compose restart api` → readyz ready, index 6ce73ffaf982 |
+| P8-09 | ✅ | `docker-down.sh` (volumes kept) → `docker-up.sh --no-build` → reviewer (created only by the demo seed) logs in: 200, so the database volume persisted |
+| P8-10 | ✅ | `--observability`: Prometheus target `rag-api` up; `sum(qa_requests_total)` = 13 after the smoke and 5 extra questions. Grafana dashboard: not opened before teardown |
+| P8-11 | ❌ | `security-scan.sh --images --only trivy`: rag-api and rag-index clean; **rag-web: fixable CRITICAL** → F-19 |
+| P8-12 | ✅ | `docker-down.sh --volumes`: no healthcare-rag volumes left |
+
+## Phase 9: Kubernetes on kind (2026-11-23) ✅
+
+| ID | Result | Evidence |
+| --- | --- | --- |
+| P9-01 | ⚠️ | `k8s-up.sh --recreate`: cluster (1 control plane + 2 workers, v1.37.0) and platform up, app images loaded; **postgres:18-alpine failed to load** (`ctr: content digest … not found`) → F-20; nothing applied |
+| P9-01b | ⚠️ | after the F-20 fix: postgres loaded, migrate and seed jobs complete, api 2/2, web, gateway Programmed; smoke step gave up after 120 s ("gateway does not answer") although the gateway answered moments later → F-21 |
+| P9-01c | ✅ | after the F-21 fix: `k8s-up.sh --no-build` ends with the smoke test through the gateway 7/7 PASS |
+| P9-02 | ✅ | `k8s-status.sh`: HPA api 2–6 at 1%/70% CPU; PDB api and web minAvailable 1; 4 NetworkPolicies incl. default-deny-ingress; gateway `hcrag` Programmed; readyz ready through the gateway |
+| P9-03 | ✅ | api: 2 replicas, init container `index`; pod `runAsNonRoot` uid/gid 10001, fsGroup 10001, seccomp RuntimeDefault; container `allowPrivilegeEscalation: false`, capabilities drop ALL, `readOnlyRootFilesystem: true`; probes startup /healthz, readiness /readyz, liveness /healthz |
+| P9-04 | ✅ | through the gateway: index **6ce73ffaf982 (third platform: Windows, Compose, kind)**; `/qa` validated 0.838923; login with the generated secret 200 |
+| P9-05 | ✅ | Pod Security Admission `restricted` refused an unhardened probe pod (namespace hardening enforced). A PSA-compliant busybox probe (uid 65534, seccomp, drop ALL) → `nc postgres 5432`: **blocked**; control: api → postgres allowed. NetworkPolicy is selective, not blanket |
+| P9-06 | ✅ | `k8s-verify.sh` under 20 VUs of k6 load: rolling restart of every api and web pod → **zero failed requests**; index rollout to bfae4024806c (20/20 consecutive requests served it), `rollout undo` → 6ce73ffaf982 (20/20) → **zero failed requests** |
+| P9-07 | ✅ | Playwright 20/20 in 32 s through the Envoy gateway against in-cluster PostgreSQL |
+| P9-08 | ✅ | `--overlay prod` renders 22 objects: ExternalSecret, Gateway (TLS), HPA, 2 PDBs, 4 NetworkPolicies; no in-cluster postgres or StatefulSet (managed database in production) |
+
+## Phase 10: CI/CD (2026-11-23, in progress)
+
+| ID | Result | Evidence |
+| --- | --- | --- |
+| P10-03 | ❌ (known OI-39) | `git push origin main` **succeeded**: origin/main = local main = 7c4ac0a (five manual-test commits reached main without a PR or CI gate). `gh api …/rulesets` → 403 "Upgrade to GitHub Pro or make this repository public". Rulesets exist as code (`.github/rulesets/*.json`, `scripts/github-protect.sh`) but cannot be enforced on a private repository on GitHub Free; already recorded as OI-39 in the Phase 10 report. Owner decision pending: public repository, GitHub Pro, or documented acceptance |
 
 ## Next: quality re-test sprint (after Phase 12)
 
@@ -112,4 +151,10 @@ together on dev only and credited on a fresh test set (test-v3; test-v2 is spent
 | F-12 | Low (test tooling) | `e2e/audit/ui-audit.mjs` saved τ = 0.65 and left it, changing every later answer on the stack | ✅ Fixed: the audit restores 0.6 |
 | F-13 | Low (UI) | No favicon: `/favicon.ico` 404 on every page (the audit's only console error, best practices 96) | ✅ Fixed: inline SVG favicon (CSP already allows `data:` images) |
 | F-14 | Low (test reliability) | First admin vitest timed out on the cold lazy chunk; also `test_activating_a_corrupted_version…` read the server path that F-11 removed | ✅ Fixed: chunk warmed in `beforeAll`; test uses `IndexService.store_dir` |
-| F-15 | Medium (test coverage on Windows) | All 45 `[postgres]` tests errored at setup when Docker was running: `Path(r"\\.\pipe\docker_engine").exists()` raised `OSError [WinError 231] All pipe instances are busy` | Fix applied in `tests/persistence.py` (busy pipe = Docker available; host override on Windows); pending re-run |
+| F-15 | Medium (test coverage on Windows) | All 45 `[postgres]` tests errored at setup when Docker was running: `Path(r"\\.\pipe\docker_engine").exists()` raised `OSError [WinError 231] All pipe instances are busy` | ✅ Fixed in `tests/persistence.py` (busy pipe = Docker available; host override on Windows): 45/45 `[postgres]` passed (commit 7c4ac0a) |
+| F-16 | Low (test fidelity) | PostgreSQL tests ran on `postgres:17-alpine`; Compose and the local Kubernetes overlay deploy `postgres:18-alpine` | ✅ Fixed: tests use 18-alpine; 45/45 passed |
+| F-17 | High (Windows deployability) | `scripts/docker-up.sh` failed on Git Bash: `MSYS_NO_PATHCONV=1` passed `/c/Users/...` to docker.exe → "unable to prepare context: path not found". Affects every docker-*/k8s-* script on Windows | Fix in `scripts/lib/common.sh` (`cygpath -m` for every script; first placed in containers.sh, which then broke the smoke step that docker-up calls with `MSYS_NO_PATHCONV` inherited): ✅ build, Compose stack and smoke through nginx all pass from Git Bash |
+| F-18 | Low (CI gate fragility) | rag-api read 443 MB > the 400 MB CI budget by `docker image inspect .Size`; ADR-0014 recorded ≈ 350 MB | ✅ Measured: venv 211 MB (= ADR-0014); layers sum to **341 MB**, so the image did not grow. Docker Desktop's containerd store makes `inspect .Size` count compressed blobs too. CI gate now sums layer sizes (`scripts/ci/image-size.sh`): 341 MB < 400 |
+| F-19 | High (supply chain) | trivy: a fixable CRITICAL vulnerability in `rag-web:local` (nginx/Alpine runtime image); the `images` CI job would block it | Packages: brotli-libs 1.2.0-r1 (CVE-2026-111497, fixed 1.2.1-r0), nginx 1.30.6-r1 (CVE-2026-113425 mail proxy, CVE-2026-121810 HTTP/3; fixed 1.30.7-r0), alpine 3.24.2; still present after `--no-cache --pull`, so the base tag itself lags. Neither nginx feature is enabled in our config. `apk upgrade --no-cache` added to the runtime stage → brotli-libs 1.2.1-r0 ✅. nginx is the nginx.org package and stays 1.30.6-r1 (fix not published there): scan still fails. **Owner decision (2026-11-23): A, wait for the upstream fix**; no suppression. Re-check with `scripts/docker-rebuild.sh --no-cache` + `security-scan.sh --images`; image publishing stays blocked by CI until it passes. Alternatives considered: Alpine-native nginx runtime (B), time-limited documented ignore (C) |
+| F-20 | High (Windows deployability) | `k8s-up.sh` could not load the pulled multi-platform `postgres:18-alpine` into kind under Docker Desktop's containerd store: `kind load` and the `ctr --all-platforms` fallback both need content for every platform, but only amd64 is stored | ✅ Fixed in `load_images` (`docker save --platform` + `ctr import --platform` for the daemon's platform): deploy completed |
+| F-21 | Medium (Windows deployability) | `k8s-up.sh` smoke always reported "gateway does not answer" although it answered: `wait_http` used `curl -o /dev/null`, and with `MSYS_NO_PATHCONV=1` curl.exe received the literal path, failed to write and returned an error on every probe. First diagnosed as timing (wait raised to 300 s, reverted) | ✅ Fixed: redirect in bash (`>/dev/null`); smoke through the gateway passes |

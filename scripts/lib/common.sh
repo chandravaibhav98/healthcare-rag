@@ -11,6 +11,13 @@ if [[ -n "${_HCRAG_COMMON_LOADED:-}" ]]; then return 0; fi
 _HCRAG_COMMON_LOADED=1
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+# Git Bash: use the mixed form C:/Users/... . Native Windows programs (docker, kubectl,
+# kind, uv) cannot resolve /c/Users/... once MSYS path conversion is off, which the
+# container scripts need, and the setting is inherited by every script they call
+# (manual test F-17). Bash itself accepts both forms; elsewhere this is a no-op.
+if command -v cygpath >/dev/null 2>&1; then
+  REPO_ROOT="$(cygpath -m "$REPO_ROOT")"
+fi
 BACKEND_DIR="$REPO_ROOT/backend"
 FRONTEND_DIR="$REPO_ROOT/frontend"
 E2E_DIR="$REPO_ROOT/e2e"

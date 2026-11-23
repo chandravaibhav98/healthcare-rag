@@ -8,6 +8,7 @@
 if [[ -n "${_HCRAG_CONTAINERS_LOADED:-}" ]]; then return 0; fi
 _HCRAG_CONTAINERS_LOADED=1
 
+# REPO_ROOT is already in C:/... form on Git Bash (common.sh, manual test F-17).
 COMPOSE_DIR="$REPO_ROOT/deploy/compose"
 COMPOSE_ENV="$COMPOSE_DIR/.env"
 DOCKER_DIR="$REPO_ROOT/deploy/docker"
@@ -132,11 +133,16 @@ load_images() {
     local cluster="${K8S_CONTEXT#kind-}"
     for img in "$@"; do
       if ! run kind load docker-image --name "$cluster" "$img"; then
-        # Docker's containerd image store can export images kind load rejects; import
-        # straight into each node's containerd instead.
-        log_warn "kind load failed for $img; importing with ctr on each node"
+        # Docker's containerd image store keeps only the local platform of a pulled
+        # multi-platform image (e.g. postgres:18-alpine), but `docker save` still writes
+        # the whole index, so an all-platform import fails with "content digest ... not
+        # found" (manual test F-20). Export and import just the daemon's platform.
+        local platform
+        platform="$(docker version --format '{{.Server.Os}}/{{.Server.Arch}}')"
+        log_warn "kind load failed for $img; importing $platform with ctr on each node"
         for node in $(kind get nodes --name "$cluster"); do
-          docker save "$img" | docker exec -i "$node" ctr -n k8s.io images import --all-platforms - >/dev/null \
+          docker save --platform "$platform" "$img" \
+            | docker exec -i "$node" ctr -n k8s.io images import --platform "$platform" - >/dev/null \
             || die "could not load $img into $node"
         done
       fi
@@ -155,7 +161,10 @@ load_images() {
 # wait_http <url> <seconds>: poll until the URL answers 2xx.
 wait_http() {
   local url="$1" deadline=$((SECONDS + $2))
-  until curl -fsS -o /dev/null --max-time 3 "$url" 2>/dev/null; do
+  # Redirect in bash, not with `curl -o /dev/null`: with MSYS_NO_PATHCONV=1 (above), Git
+  # Bash hands "/dev/null" to curl.exe unconverted, the write fails and every probe looks
+  # like a dead gateway (manual test F-21).
+  until curl -fsS --max-time 3 "$url" >/dev/null 2>&1; do
     ((SECONDS < deadline)) || return 1
     sleep 2
   done
