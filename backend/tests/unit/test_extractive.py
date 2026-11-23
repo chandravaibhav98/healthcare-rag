@@ -8,8 +8,15 @@ import pytest
 
 from app.api.schemas.qa import QAResponse
 from app.domain.models import GeneratedAnswer, RetrievedChunk
+from app.rag.analysis import analyze
 from app.rag.generation.answer_types import detect_answer_types, matches_answer_type
-from app.rag.generation.extractive import ExtractiveGenerator, _candidates, _with_marker
+from app.rag.generation.extractive import (
+    ExtractiveGenerator,
+    _Candidate,
+    _candidates,
+    _gate_by_value_type,
+    _with_marker,
+)
 from app.rag.ingestion.sentences import sentence_spans, split_sentences
 from app.rag.pipeline import LoadedIndex, load_index
 from app.rag.retrieval.expansion import QueryExpander
@@ -123,7 +130,8 @@ def test_citation_integrity(index: LoadedIndex) -> None:
     markers = [int(m) for m in re.findall(r"\[(\d+)\]", answer.text)]
     ids = [c.citation_id for c in answer.citations]
     assert ids == list(range(1, len(ids) + 1))
-    assert set(markers) == set(ids)  # every marker resolves; every citation is used
+    # every marker resolves; every citation is used
+    assert set(markers) == set(ids)
     first_use = list(dict.fromkeys(markers))
     assert first_use == ids  # numbered in order of first appearance
     by_id = {c.citation_id: c for c in answer.citations}
@@ -179,3 +187,72 @@ def test_generated_answer_satisfies_api_contract_v1(index: LoadedIndex) -> None:
 def test_invalid_generator_config(index: LoadedIndex) -> None:
     with pytest.raises(ValueError, match="invalid generator"):
         ExtractiveGenerator(index, max_sentences=0)
+
+
+def test_lead_in_sentence_is_kept_with_its_list() -> None:
+    text = (
+        "Staff must clean hands at three moments during care:\n\n"
+        "1. Before touching a patient.\n"
+        "2. After touching a patient.\n\n"
+        "Unrelated closing sentence is here."
+    )
+    cands = _candidates(0, text)
+    texts = [c.text for c in cands]
+    assert texts[0] == (
+        "Staff must clean hands at three moments during care: "
+        "1. Before touching a patient. 2. After touching a patient."
+    )
+    assert cands[0].is_list_item
+    assert "Staff must clean hands at three moments during care:" not in texts
+    # items stay individually selectable
+    assert "Before touching a patient." in texts
+
+
+def test_dangling_lead_in_is_dropped() -> None:
+    texts = [c.text for c in _candidates(0, "First sentence about gloves here. Wear these items:")]
+    assert texts == ["First sentence about gloves here."]
+
+
+# ------------------------------------------------------- value-type gate (F-03) ----
+
+
+def _cand(text: str, *, item: bool = False) -> _Candidate:
+    return _Candidate(0, 0, len(text), text, frozenset(analyze(text)), item)
+
+
+def test_value_type_gate_drops_sentences_that_only_echo_the_question() -> None:
+    types = detect_answer_types("What temperature range should vaccines be stored at?")
+    echo = _cand("Report vaccines stored outside the recommended temperature range.")
+    value = _cand("Refrigerated vaccines must be stored between 2 °C and 8 °C.")
+    kept = _gate_by_value_type([(0.9, echo), (0.5, value)], types)
+    assert [c.text for _, c in kept] == [value.text]
+
+
+def test_value_type_gate_falls_back_when_no_sentence_states_the_value() -> None:
+    types = detect_answer_types("What temperature range should vaccines be stored at?")
+    pool = [(0.9, _cand("Report vaccines stored outside the recommended temperature range."))]
+    assert _gate_by_value_type(pool, types) == pool
+
+
+@pytest.mark.parametrize(
+    "question",
+    [
+        # quantity: "two doses" in words
+        "How many doses of hepatitis B vaccine are needed?",
+        "When should health workers perform hand hygiene?",  # timing: cue too loose
+        "What is the order for removing PPE?",  # procedure: prose may answer
+    ],
+)
+def test_value_type_gate_leaves_soft_types_alone(question: str) -> None:
+    pool = [(0.9, _cand("Two doses are given to every health worker without immunity."))]
+    assert _gate_by_value_type(pool, detect_answer_types(question)) == pool
+
+
+def test_value_type_gate_is_off_by_default_and_can_be_enabled(index: LoadedIndex) -> None:
+    q = "How long should hands be rubbed with alcohol-based hand rub?"
+    default, _ = _answer(index, q)
+    off, _ = _answer(index, q, value_type_gate=False)
+    on, _ = _answer(index, q, value_type_gate=True)
+    # default = no gate (pending the Phase 4 re-test)
+    assert default.text == off.text
+    assert on.text  # the ablation configuration still answers

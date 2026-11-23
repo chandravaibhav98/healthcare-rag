@@ -1275,7 +1275,7 @@ export interface components {
             query_support: number;
             /**
              * Retrieval Score
-             * @description Normalised fused retrieval score of the cited chunks.
+             * @description Absolute cosine similarity between the (expanded) question and the best cited chunk in the embedding space. Not the rank-based fused score reported in `citations[].score`, which is normalised so the top result is 1.0.
              */
             retrieval_score: number;
             /**
@@ -1459,7 +1459,7 @@ export interface operations {
                     "application/json": components["schemas"]["QAResponse"];
                 };
             };
-            /** @description Bad Request (body is not valid JSON) */
+            /** @description Bad Request (body could not be decoded, e.g. not UTF-8; malformed JSON is a 422) */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -1537,7 +1537,7 @@ export interface operations {
                     "application/json": components["schemas"]["QAResponse"];
                 };
             };
-            /** @description Bad Request (body is not valid JSON) */
+            /** @description Bad Request (body could not be decoded, e.g. not UTF-8; malformed JSON is a 422) */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -1615,7 +1615,7 @@ export interface operations {
                     "application/json": components["schemas"]["EscalationResponse"];
                 };
             };
-            /** @description Bad Request (body is not valid JSON) */
+            /** @description Bad Request (body could not be decoded, e.g. not UTF-8; malformed JSON is a 422) */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -1684,7 +1684,7 @@ export interface operations {
                     "application/json": components["schemas"]["TokenResponse"];
                 };
             };
-            /** @description Bad Request (body is not valid JSON) */
+            /** @description Bad Request (body could not be decoded, e.g. not UTF-8; malformed JSON is a 422) */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -1755,7 +1755,7 @@ export interface operations {
                     "application/json": components["schemas"]["TokenResponse"];
                 };
             };
-            /** @description Bad Request (body is not valid JSON) */
+            /** @description Bad Request (body could not be decoded, e.g. not UTF-8; malformed JSON is a 422) */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -1815,7 +1815,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Bad Request (body is not valid JSON) */
+            /** @description Bad Request (body could not be decoded, e.g. not UTF-8; malformed JSON is a 422) */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2179,7 +2179,7 @@ export interface operations {
                     "application/json": components["schemas"]["ReviewOut"];
                 };
             };
-            /** @description Bad Request (body is not valid JSON) */
+            /** @description Bad Request (body could not be decoded, e.g. not UTF-8; malformed JSON is a 422) */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2841,7 +2841,7 @@ export interface operations {
                     "application/json": components["schemas"]["ConfigOut"];
                 };
             };
-            /** @description Bad Request (body is not valid JSON) */
+            /** @description Bad Request (body could not be decoded, e.g. not UTF-8; malformed JSON is a 422) */
             400: {
                 headers: {
                     [name: string]: unknown;

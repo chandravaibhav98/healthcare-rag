@@ -40,3 +40,26 @@ def test_off_topic_questions_abstain(corpus_client: TestClient, question: str) -
     body = corpus_client.post("/qa", json={"question": question}).json()
     assert body["status"] == "needs_review"
     assert body["meta"]["abstained"]
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason=(
+        "F-03 known limitation: value-type gate is off by default until the Phase 4 re-test "
+        "(it regressed the dev/test pass rate; see F-04). Remove this marker when fixed."
+    ),
+)
+def test_value_question_is_answered_with_the_value_not_echoed_words(
+    corpus_client: TestClient,
+) -> None:
+    """Manual-test finding F-03: the answer was validated at 0.85 but gave only the frozen
+    range and a sentence about reporting errors, omitting 2-8 °C (the range for most
+    vaccines), because that sentence repeated the question's words. Every sentence in the
+    answer must now state a temperature, and the refrigerated range must be present."""
+    body = corpus_client.post(
+        "/api/v1/qa", json={"question": "What temperature range should vaccines be stored at?"}
+    ).json()
+    assert body["status"] == "validated"
+    assert "2 °C" in body["answer"], body["answer"]
+    assert "8 °C" in body["answer"], body["answer"]
+    assert "administration errors" not in body["answer"], body["answer"]

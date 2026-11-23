@@ -1,0 +1,18 @@
+{
+  "description": "test-v2 re-run on the current code (concept-level query expansion, evaluation-report §4.3). Informational: test-v2 was spent on 2026-11-12; the official result stays in test-v2-results.json (git f6a754e). scripts/reproduce.* compares fresh test-v2 runs against this file.",
+  "source_run": "20261121T082655Z-eval-test-6ce73ffaf982",
+  "date": "2026-11-21",
+  "index_version": "6ce73ffaf982",
+  "scorecard": {
+    "p@5": 0.4289,
+    "p@5_ceiling": 0.5831,
+    "p@5_of_ceiling": 0.7356,
+    "hit@5": 0.9639,
+    "mrr": 0.8588,
+    "ndcg@5": 0.7977,
+    "pass_rate": 0.8072,
+    "grounded_pass_rate": 0.8072,
+    "false_validation_rate": 0.1667,
+    "mean_confidence": 0.715
+  }
+}

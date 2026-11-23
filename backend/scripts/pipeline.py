@@ -169,7 +169,9 @@ def _cmd_ask(args: argparse.Namespace, settings: Settings) -> int:
     )
     expanded = runtime.retriever.expand(args.question)
     hits = runtime.retriever.retrieve(args.question, args.top_k)
-    print(f"index_version {runtime.index_version} · mode {args.mode} · top_k {args.top_k}")
+    dense_w, _sparse_w = runtime.retriever.weights
+    note = "  (RRF_WEIGHT_DENSE=0 → BM25 only)" if args.mode == "hybrid" and dense_w == 0 else ""
+    print(f"index_version {runtime.index_version} · mode {args.mode} · top_k {args.top_k}{note}")
     if expanded.added_terms:
         print(f"expanded with: {', '.join(expanded.added_terms)}")
     print("\nrank  score  dense sparse  chunk_id")

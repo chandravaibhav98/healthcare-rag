@@ -3,8 +3,15 @@
     rrf(d) = Σ_r w_r / (k + rank_r(d))        rank is 1-based; k = RRF_K (60)
     score  = rrf(d) / (Σ_r w_r / (k + 1)) ∈ (0, 1]   (1.0 = ranked first everywhere)
 
-Weights default to 1.0 (plain RRF). Phase 4 tunes them on the dev split: the hashed
-dense retriever is weaker than BM25 on this corpus, so it gets a smaller vote.
+Votes come from RRF_WEIGHT_DENSE / RRF_WEIGHT_SPARSE (tuned on the dev split in
+Phase 4) and apply to `hybrid` mode only. `dense` and `sparse` are single-retriever
+ablations: they always run their retriever with a full vote, so a tuned dense weight
+of 0 never disables an explicit `--mode dense`.
+
+Expansion reaches the retrievers differently. Dense search embeds the expanded text.
+Sparse search scores each synonym group as one concept (`sparse.build_clauses`), so a
+long expansion such as IPC → "infection prevention and control" cannot outvote the
+other concepts in the question.
 
 RRF uses ranks only, so the dense (cosine) and sparse (BM25) score scales never need
 calibrating against each other. Ties are broken by `chunk_id`, which makes results
@@ -46,6 +53,17 @@ class RetrievalMode(StrEnum):
     SPARSE = "sparse"
 
 
+def mode_weights(
+    mode: RetrievalMode, dense_weight: float, sparse_weight: float
+) -> tuple[float, float]:
+    """(dense, sparse) votes actually used. Tuned weights only shape `hybrid`."""
+    if mode is RetrievalMode.DENSE:
+        return (1.0, 0.0)
+    if mode is RetrievalMode.SPARSE:
+        return (0.0, 1.0)
+    return (dense_weight, sparse_weight)
+
+
 class HybridRetriever:
     def __init__(
         self,
@@ -64,17 +82,17 @@ class HybridRetriever:
             raise ValueError("RRF weights must be >= 0 and not both 0")
         self._index = index
         self._dense = DenseRetriever(index)
-        self._sparse = SparseRetriever(index)
+        self._sparse = SparseRetriever(index, expander)
         self._rrf_k = rrf_k
         self._candidate_k = candidate_k
         self._expander = expander
         self._mode = mode
-        self._weights = (
-            dense_weight if mode != RetrievalMode.SPARSE else 0.0,
-            sparse_weight if mode != RetrievalMode.DENSE else 0.0,
-        )
-        if sum(self._weights) == 0:
-            raise ValueError(f"mode {mode.value} has a zero RRF weight")
+        self._weights = mode_weights(mode, dense_weight, sparse_weight)
+
+    @property
+    def weights(self) -> tuple[float, float]:
+        """(dense, sparse) votes in effect for this retriever's mode."""
+        return self._weights
 
     def expand(self, question: str) -> ExpandedQuery:
         return self._expander.expand(question) if self._expander else ExpandedQuery(question, ())
@@ -85,11 +103,12 @@ class HybridRetriever:
         if not question.strip():
             raise ValueError("question must not be empty")
 
-        query = self.expand(question).text
         depth = max(self._candidate_k, top_k)
         # A retriever with a zero vote is skipped entirely (no wasted search).
-        dense = self._dense.search(query, depth) if self._weights[0] > 0 else []
-        sparse = self._sparse.search(query, depth) if self._weights[1] > 0 else []
+        dense = (
+            self._dense.search(self.expand(question).text, depth) if self._weights[0] > 0 else []
+        )
+        sparse = self._sparse.search_question(question, depth) if self._weights[1] > 0 else []
         dense_rank = {row: r for r, (row, _) in enumerate(dense, start=1)}
         sparse_rank = {row: r for r, (row, _) in enumerate(sparse, start=1)}
 

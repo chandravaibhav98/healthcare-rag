@@ -1,13 +1,13 @@
 {
   "index_version": "6ce73ffaf982",
-  "p@5": 0.6016,
-  "p@5_ceiling": 0.8262,
-  "p@5_of_ceiling": 0.7282,
-  "hit@5": 0.9918,
-  "mrr": 0.8956,
-  "ndcg@5": 0.7897,
-  "pass_rate": 0.9262,
-  "grounded_pass_rate": 0.8934,
+  "p@5": 0.6081,
+  "p@5_ceiling": 0.8276,
+  "p@5_of_ceiling": 0.7348,
+  "hit@5": 0.9837,
+  "mrr": 0.902,
+  "ndcg@5": 0.7964,
+  "pass_rate": 0.9187,
+  "grounded_pass_rate": 0.8862,
   "false_validation_rate": 0.0,
-  "mean_confidence": 0.7599
+  "mean_confidence": 0.7547
 }

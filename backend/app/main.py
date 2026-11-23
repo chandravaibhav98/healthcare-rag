@@ -69,8 +69,9 @@ def _build_openapi(app: FastAPI) -> dict[str, Any]:
     media type is set here so the published contract matches the wire (ADR-0006). Only
     ProblemDetails bodies are converted: `/readyz` returns its own model with 503.
     Also: optional-auth routes are marked `security: [{}, bearer]`, and every operation
-    with a body documents the 400 FastAPI sends for malformed JSON (both found by the
-    Phase 7 Schemathesis run).
+    with a body documents the 400 FastAPI sends when the body cannot be decoded at all,
+    e.g. invalid UTF-8 (both found by the Phase 7 Schemathesis run). Malformed JSON is a
+    422 `json_invalid` validation error, not a 400 (manual test F-05).
     """
     if app.openapi_schema:
         return app.openapi_schema
@@ -84,12 +85,16 @@ def _build_openapi(app: FastAPI) -> dict[str, Any]:
         for operation in path_item.values():
             if operation.pop("x-optional-auth", False):
                 operation["security"] = [{}, {"bearerAuth": []}]
-            # A body that is not valid JSON never reaches validation: FastAPI answers 400.
+            # A body that cannot be decoded (e.g. invalid UTF-8) never reaches validation:
+            # FastAPI answers 400. Malformed JSON is a 422 `json_invalid` (manual test F-05).
             if "requestBody" in operation:
                 operation["responses"].setdefault(
                     "400",
                     {
-                        "description": "Bad Request (body is not valid JSON)",
+                        "description": (
+                            "Bad Request (body could not be decoded, e.g. not UTF-8; "
+                            "malformed JSON is a 422)"
+                        ),
                         "content": {"application/json": {"schema": {"$ref": _PROBLEM_REF}}},
                     },
                 )

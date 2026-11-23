@@ -159,7 +159,7 @@ curl -s -X POST http://localhost:8000/api/v1/qa -H 'Content-Type: application/js
 }
 ```
 
-Other errors use the same shape. Examples: 400 (malformed JSON), 401, 403
+Other errors use the same shape. Examples: 400 (body could not be decoded, e.g. invalid UTF-8; malformed JSON is a 422 `json_invalid`), 401, 403
 (`"Requires the 'reviewer' role."`), 404, 409, 429 (with `Retry-After`), 500 (no
 internals), 503 (database not configured or not ready).
 

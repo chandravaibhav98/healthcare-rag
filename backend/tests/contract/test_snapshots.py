@@ -43,7 +43,10 @@ def test_openapi_response_schema_keeps_the_four_spec_fields() -> None:
     # (only when ALLOW_ANONYMOUS_QA=false). 1.3.0: POST /api/v1/escalations, stats
     # histogram, escalation fields. All additive, so minor bumps (ADR-0006). 1.3.1: the
     # Schemathesis findings (optional auth, sort enums, offset bound, 400 and media types).
-    assert doc["info"]["version"] == "1.3.1"
+    # 1.3.2: `signals.retrieval_score` description corrected to absolute cosine similarity
+    # (F-01) and the 400 described as an undecodable body (F-05). Manual testing, Phase 3
+    # re-test. Description only, so a patch bump.
+    assert doc["info"]["version"] == "1.3.2"
     for path in ("/qa", "/api/v1/qa", "/healthz", "/readyz", "/version"):
         assert path in doc["paths"], f"{path} must survive every 1.x release"
     assert "superseded" not in doc["components"]["schemas"]["Citation"].get("required", [])

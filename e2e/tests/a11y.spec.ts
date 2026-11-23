@@ -7,12 +7,33 @@ import { ANSWERABLE, ask, login } from './helpers';
 // every route in light and dark mode inside the CI E2E job. Any violation fails the build.
 const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice'];
 
+/**
+ * Switch theme and wait for the page to reach its final colours.
+ *
+ * Toggling `.dark` changes every token at once, and elements with `transition-colors`
+ * animate between palettes for ~150 ms. Auditing mid-transition measures blended colours
+ * (e.g. mid-blue on mid-grey) that no user sees at rest, which shows up as flaky
+ * `color-contrast` failures. So: let the style change land (two frames), then await every
+ * running CSS *transition*. Keyframe animations (e.g. `animate-spin`) are excluded because
+ * infinite ones never finish.
+ */
+async function setTheme(page: Page, theme: 'light' | 'dark'): Promise<void> {
+  await page.evaluate(async (t) => {
+    document.documentElement.classList.toggle('dark', t === 'dark');
+    await new Promise<void>((resolve) => {
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+    });
+    const transitions = document
+      .getAnimations()
+      .filter((animation) => animation instanceof CSSTransition);
+    // `finished` rejects when a transition is cancelled; that still means "settled".
+    await Promise.all(transitions.map((animation) => animation.finished.catch(() => undefined)));
+  }, theme);
+}
+
 async function expectNoViolations(page: Page, name: string): Promise<void> {
   for (const theme of ['light', 'dark'] as const) {
-    await page.evaluate(
-      (t) => document.documentElement.classList.toggle('dark', t === 'dark'),
-      theme,
-    );
+    await setTheme(page, theme);
     const { violations } = await new AxeBuilder({ page }).withTags(TAGS).analyze();
     const summary = violations.map(
       (v) => `${v.id} (${v.impact ?? 'n/a'}): ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`,

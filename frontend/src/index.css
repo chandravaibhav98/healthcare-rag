@@ -5,7 +5,8 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /* Design tokens (shadcn/ui-style). Every foreground/background pair below meets
-   WCAG 2.2 AA contrast (≥ 4.5:1 for text) in both themes. */
+   WCAG 2.2 AA contrast (≥ 4.5:1 for text) in both themes at rest; theme switches
+   suppress transitions so no intermediate blend is ever rendered. */
 :root {
   --background: #ffffff;
   --foreground: #0f172a;
@@ -94,5 +95,13 @@
       animation-duration: 0.01ms !important;
       transition-duration: 0.01ms !important;
     }
+  }
+  /* Theme switches are instant (see applyTheme): suppress colour transitions while the
+    palette swaps so elements never pass through low-contrast blends. */
+  .theme-switching,
+  .theme-switching *,
+  .theme-switching *::before,
+  .theme-switching *::after {
+    transition: none !important;
   }
 }

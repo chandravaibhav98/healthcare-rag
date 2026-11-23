@@ -565,6 +565,12 @@ sterilization:
     g2: [nih-ster-001::immediate-use-steam-sterilization::0001, nih-ster-002::immediate-use-sterilization::0001]
     g1: []
     kw: ["urgent"]
+  - q: "IPC measures for sterilisation"
+    kind: acronym
+    g2: [who-ster-001::the-decontamination-cycle::0001, who-ster-001::the-spaulding-classification::0001, who-ster-001::monitoring-sterilization::0001]
+    g1: [cdc-ster-001::purpose::0001, nih-ster-002::cleaning-comes-first::0001]
+    kw: ["cleaning", "sterilized"]
+    seen: true
 
 transmission-based-precautions:
   - q: "How many air changes per hour does an airborne isolation room need?"

@@ -5,8 +5,10 @@
 
 Called by scripts/reproduce.{sh,ps1} (plan Phase 12). It checks that:
 * the dev scorecard equals `evaluation/baseline.json` (the CI regression baseline);
-* the held-out test scorecard equals the archived official result
-  (`docs/evaluation/test-v2-results.json`), metric by metric;
+* the held-out test scorecard equals the reproduction record for the current code
+  (`docs/evaluation/test-v2-reproduction.json`), metric by metric. The official test-v2
+  result (`docs/evaluation/test-v2-results.json`, run once at git f6a754e) is historical
+  and stays unchanged; evaluation-report §4.3 explains the difference;
 * both ran on the index the determinism check built (SC1),
 and writes DIR/RESULTS.md: every success criterion with the reproduced value, the target
 and whether it is met. With `--zip` it also writes DIR/../NAME.zip and SHA256SUMS.
@@ -28,7 +30,8 @@ from typing import Any, Final
 
 ROOT: Final = Path(__file__).resolve().parents[2]
 BASELINE: Final = ROOT / "backend/evaluation/baseline.json"
-TEST_RECORD: Final = ROOT / "docs/evaluation/test-v2-results.json"
+TEST_RECORD: Final = ROOT / "docs/evaluation/test-v2-reproduction.json"
+TEST_OFFICIAL: Final = ROOT / "docs/evaluation/test-v2-results.json"
 TOLERANCE: Final = 1e-4  # scorecards are rounded to 4 decimals
 
 #: (key, label, target, comparison) for RESULTS.md. None = reported, no target.
@@ -48,23 +51,10 @@ def _load(path: Path) -> dict[str, Any]:
     return data
 
 
-def _test_record() -> dict[str, float]:
-    """The archived test-v2 result, flattened to scorecard keys."""
+def _test_record() -> dict[str, Any]:
+    """The expected test-v2 scorecard for the current code (plus its index_version)."""
     rec = _load(TEST_RECORD)
-    r, v = rec["retrieval"], rec["validation"]
-    return {
-        "index_version": rec["index_version"],
-        "p@5": r["p@5"]["mean"],
-        "p@5_ceiling": r["ceiling@5"]["mean"],
-        "p@5_of_ceiling": r["p@5_of_ceiling"],
-        "hit@5": r["hit@5"]["mean"],
-        "mrr": r["rr"]["mean"],
-        "ndcg@5": r["ndcg@5"]["mean"],
-        "pass_rate": v["pass_rate"]["mean"],
-        "grounded_pass_rate": v["grounded_pass_rate"]["mean"],
-        "false_validation_rate": v["false_validation_rate"]["mean"],
-        "mean_confidence": v["mean_confidence"],
-    }
+    return {"index_version": rec["index_version"], **rec["scorecard"]}
 
 
 def compare(name: str, got: dict[str, Any], want: dict[str, Any]) -> list[str]:
@@ -125,8 +115,9 @@ def results_md(
         f"| Demo video from a cold start | MP4 | — | — | {_gate(gates.get('demo'))} |",
         "",
         "Recorded values: dev = `backend/evaluation/baseline.json`; test-v2 =",
-        "`docs/evaluation/test-v2-results.json` (run once on 2026-11-12, configuration frozen).",
-        "Interpretation, confidence intervals and limitations: `docs/evaluation-report.md`.",
+        "`docs/evaluation/test-v2-reproduction.json` (current code). The official test-v2",
+        "result, run once on 2026-11-12 with the frozen configuration, is",
+        "`docs/evaluation/test-v2-results.json` (evaluation-report §4.3).",
     ]
     if problems:
         lines += ["", "## Differences", ""] + [f"- {p}" for p in problems]

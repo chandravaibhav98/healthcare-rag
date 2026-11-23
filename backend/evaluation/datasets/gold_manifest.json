@@ -1,15 +1,15 @@
 {
   "index_version": "6ce73ffaf982",
   "source_sha256": {
-    "gold_source.yaml": "02714790e627b829dc1afccda0b609bd8a7bcab6fc58462597a2ec0eb4c8cbce",
+    "gold_source.yaml": "e8329e02cf007c702f131725d0be053e9c24c2d056acb6a0c9917c97f5fccfd5",
     "gold_test_source.yaml": "3a65e49ff78ebe725b6936d1f72ec3a0f8c1da37fd85471c9d0fcda07a4e3402"
   },
   "counts": {
     "dev": {
-      "total": 144,
-      "answerable": 122,
+      "total": 145,
+      "answerable": 123,
       "by_kind": {
-        "acronym": 13,
+        "acronym": 14,
         "direct": 88,
         "paraphrase": 21,
         "unanswerable": 22

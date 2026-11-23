@@ -22,7 +22,10 @@ from app.domain.ids import CHUNK_ID_PATTERN, DOC_ID_PATTERN, INDEX_VERSION_PATTE
 # 1.3: additive escalations, stats histogram, escalation fields (Phase 6).
 # 1.3.1: documentation precision found by Schemathesis (Phase 7): optional auth declared,
 # list `sort` as enums, `offset` <= 1,000,000, documented 400 and media types.
-CONTRACT_VERSION: Final = "1.3.1"
+# 1.3.2: documentation precision found in manual testing (Phase 3 re-test): `signals.retrieval_score`
+# is the absolute cosine similarity, not the rank-based fused score shown in `citations[].score`
+# (F-01); the documented 400 is an undecodable body, malformed JSON is a 422 (F-05).
+CONTRACT_VERSION: Final = "1.3.2"
 
 #: Fixed answer text when abstaining (ADR-0007). Clients may rely on it verbatim.
 ABSTENTION_MESSAGE: Final = (
@@ -114,7 +117,11 @@ class Signals(BaseModel):
         description="Share of question key terms found in the cited evidence."
     )
     retrieval_score: UnitFloat = Field(
-        description="Normalised fused retrieval score of the cited chunks."
+        description=(
+            "Absolute cosine similarity between the (expanded) question and the best cited chunk "
+            "in the embedding space. Not the rank-based fused score reported in `citations[].score`, "
+            "which is normalised so the top result is 1.0."
+        )
     )
     numeric_ok: bool = Field(
         description="Every number/unit in the answer appears in its cited evidence."

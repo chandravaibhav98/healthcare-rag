@@ -5,7 +5,7 @@
   after Phase 4 changed retrieval, generation, validation or their configuration, and
   `scripts/reproduce.sh` checks this on every run (§9).
 - **Index:** `6ce73ffaf982` (corpus v2, 72 documents, 346 chunks) · **Configuration:** BM25
-  + query expansion; confidence weights (0.20, 0.60, 0.20); τ = 0.6; retrieval floor 0.15.
+  - query expansion; confidence weights (0.20, 0.60, 0.20); τ = 0.6; retrieval floor 0.15.
 - **Plan ref:** `plan.md` §4 Phases 4 and 12 · ADR-0001 (relevance), ADR-0002 (confidence)
 - **Reproduce:** `scripts/reproduce.sh --quick` (metrics in about 3 minutes) or
   `scripts/eval.sh --split dev|test`. Raw outputs: `backend/evaluation/reports/<run>/`
@@ -36,14 +36,14 @@ test questions were answered (§6), and both have identified causes.
 
 ## 2. Method
 
-* **Gold data** (`backend/evaluation/datasets/DATASET_CARD.md`): section-level, graded
+- **Gold data** (`backend/evaluation/datasets/DATASET_CARD.md`): section-level, graded
   relevance (ADR-0001), labelled by reading chunk texts, blind to system output.
-* **Protocol:** every choice is made on the development pool and frozen before a test
+- **Protocol:** every choice is made on the development pool and frozen before a test
   split is run, once. When a test split has been used it is spent and joins the pool.
   test-v1 was spent this way (§5); test-v2 is the official result.
-* **Pipeline under test:** the real `QAService` (the same code as `/qa`), in-process, with
+- **Pipeline under test:** the real `QAService` (the same code as `/qa`), in-process, with
   `top_k = 5`. Retrieval metrics use the ranked list from the same retriever.
-* **Metrics:** P@K and R@K over grade ≥ 1; nDCG@5 with grades as gains; Hit@5 and MRR on
+- **Metrics:** P@K and R@K over grade ≥ 1; nDCG@5 with grades as gains; Hit@5 and MRR on
   grade 2 only; ceiling@5 = mean(min(|R|, 5)) / 5. Validation: pass rate = share of
   answerable questions returned `validated`; grounded pass rate additionally requires a
   grade-2 citation; false-validation rate = share of unanswerable questions validated.
@@ -138,6 +138,52 @@ dev and kept: floor 0.10 added one validated question and MMR alternatives were 
 Threshold curves (dev, test-v2): [`threshold-sweep-dev.svg`](evaluation/threshold-sweep-dev.svg),
 [`threshold-sweep-test-v2.svg`](evaluation/threshold-sweep-test-v2.svg).
 
+### 4.3 Post-Phase-12 change: concept-level query expansion
+
+**Change.** Expanded queries are now scored per concept rather than per term. Each
+synonym/acronym group is one BM25 pseudo-term: its tf is the sum over its phrasings,
+its df counts documents containing any phrasing (Lucene SynonymQuery semantics). Before,
+"IPC" added four summed terms while "sterilisation" added two, so long expansions
+outvoted the rest of the question. Plain BM25 (no expansion) is bit-identical.
+A lead-in sentence ending in ":" is now extracted together with its list.
+
+**Dev pool (decision basis).** On the 122 answerable questions shared with the Phase 4
+run: P@5 0.602 → 0.613, MRR 0.896 → 0.902, nDCG@5 0.790 → 0.796; Hit@5 and pass rate
+unchanged; 0 / 22 false validations. 11 questions improved, 5 regressed by one chunk.
+A hard acronym + British-spelling question ("IPC measures for sterilisation", P@5 0.0)
+was added to the pool as a known lexical-retrieval limitation.
+
+**Dense vote re-checked.** RRF_WEIGHT_DENSE ∈ {0, 0.1, 0.25, 0.5, 0.75, 1} lowered dev
+P@5 monotonically (0.608 → 0.520), confirming ADR-0011: BM25 only.
+
+**Test-v2 (informational; spent).** P@5 0.417 → 0.429 (74% of ceiling 0.583, was 72%),
+Hit@5 0.952 → 0.964, pass rate 0.807 unchanged, false validations 2 / 12 unchanged.
+Not credited as an official result; confirmation awaits test-v3 (§8).
+
+### 4.4 Worked examples from manual testing (Phase 3 re-test, 2026-11-23)
+
+**Why coverage alone cannot be confidence (ADR-0002).** Asked *"What is the recommended dose
+of amoxicillin for a child with otitis media?"*, a question that is on-topic but not covered
+by the corpus, the extractive candidate copied its sentences verbatim, so token coverage
+was **1.0**. A coverage-only validator would have returned it as `validated`. The composite
+score was **0.41**: `query_support` was 0.26 because the cited evidence did not contain the
+question's key concepts. So the API returned `needs_review` with the standard abstention
+text, and no dosing text reached the user.
+
+**"Validated" means supported, not complete (F-03, F-04).** Asked *"What temperature range
+should vaccines be stored at?"*, the answer was validated at 0.85 but gave only the frozen
+range, plus a sentence about reporting errors. It omitted 2–8 °C, the range for most
+vaccines, although both cited chunks state it. Every sentence was supported, so the
+validator was right by its own definition. The generator had ranked a sentence that
+repeats the question's words ("temperature range") above the sentences that give the
+values. A value-type gate (`ExtractiveGenerator(value_type_gate=True)`) fixes this question.
+On the dev pool, however, it also dropped correct negative answers ("do not change
+ventilator circuits routinely") and lowered the pass rate (dev 0.919 → 0.894; held-out test
+0.807 → 0.771). Its more focused answers also exposed F-04: `retrieval_score` and
+`query_support` take the maximum over cited chunks, so an extra, even irrelevant, citation
+can only raise confidence. The gate is therefore **off by default**, a strict-xfail
+regression test records the gap, and both are scheduled for a dev-only re-tune (§8 item 5).
+
 ## 5. What happened on test-v1 (spent)
 
 The first frozen configuration (BM25; union support; weights 0.20 / 0.35 / 0.45; chosen
@@ -185,6 +231,12 @@ deliverable "list of low-confidence queries for analyst review" (brief D4).
    (d) optionally an offline entailment model as a secondary check (ADR-0002 option C).
 4. **SC2 reading** needs a mentor decision: literal P@5 versus P@5 relative to the
    ceiling (ADR-0001).
+5. **Answer completeness is not measured** (§4.4, F-03/F-04). Planned, dev-only, then one
+   test read: (a) gate only questions that ask for a value ("what/which … temperature",
+   "temperature range", "how long"), not ones that merely mention it; drop frequency;
+   compute the relative-score floor before gating, so the gate can only remove candidates;
+   (b) score `retrieval_score` and `query_support` on the answer-bearing citations rather
+   than their maximum; (c) report gate on and off as an ablation.
 
 ## 9. Reproducing these numbers
 
@@ -193,7 +245,7 @@ deliverable "list of low-confidence queries for analyst review" (brief D4).
 | Everything below, compared with the records, plus the submission bundle | `scripts/reproduce.sh` (`--quick` = metrics only) | `RESULTS.md` with "Reproduced exactly: yes" |
 | SC1 | `scripts/verify-determinism.sh --runs 3` | `PASS 3 builds byte-identical · index_version 6ce73ffaf982` |
 | Dev pool | `scripts/eval.sh --split dev` | equals `backend/evaluation/baseline.json` |
-| Held-out test-v2 | `scripts/eval.sh --split test` | equals `docs/evaluation/test-v2-results.json` |
+| Held-out test-v2 | `scripts/eval.sh --split test` | equals `docs/evaluation/test-v2-reproduction.json` (current code). The official, single-run result `docs/evaluation/test-v2-results.json` was produced at git `f6a754e`; runs on the current code differ from it as described in §4.3 |
 
 Re-running the held-out split with the frozen configuration only recomputes the
 recorded numbers. Using it to choose a configuration would spend it (§5).
@@ -202,6 +254,8 @@ recorded numbers. Using it to choose a configuration would spend it (§5).
 rate 0.926, false validations 0 / 22. Test-v2 P@5 0.417 (ceiling 0.583), Hit@5 0.952,
 pass rate 0.807, false validations 2 / 12. These equal the records to four decimals,
 bootstrap intervals included (fixed seed).
+
+**2026-11-21 re-run (after §4.3):** dev P@5 0.608, Hit@5 0.984, pass rate 0.919, false validations 0 / 22 (now the dev baseline, n = 123 answerable). Test-v2 P@5 0.429, Hit@5 0.964, pass rate 0.807, false validations 2 / 12, recorded in `test-v2-reproduction.json`; the official test-v2 record is unchanged.
 
 **Serving performance** (not a quality metric, recorded for completeness): `/qa` p95
 179 ms under 50 virtual users for 5 minutes with 0% errors (Phase 7, k6); about 17 ms

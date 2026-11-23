@@ -4,6 +4,7 @@ import { readJson, writeJson } from '@/lib/storage';
 
 export type Theme = 'light' | 'dark';
 const KEY = 'hcrag.theme';
+const SWITCHING_CLASS = 'theme-switching';
 
 function systemTheme(): Theme {
   try {
@@ -18,8 +19,27 @@ export function initialTheme(): Theme {
   return stored ?? systemTheme();
 }
 
+/**
+ * Apply a theme instantly.
+ *
+ * Without suppression, every `transition-colors` element fades between palettes for
+ * ~150 ms and passes through low-contrast blends (a WCAG 1.4.3 dip users can see).
+ * We disable transitions, swap the class, force a style flush so the new colours are
+ * committed while transitions are off, then re-enable them on the next task.
+ */
 export function applyTheme(theme: Theme): void {
-  document.documentElement.classList.toggle('dark', theme === 'dark');
+  const root = document.documentElement;
+  const isDark = theme === 'dark';
+  if (root.classList.contains('dark') === isDark) return; // nothing to change
+
+  root.classList.add(SWITCHING_CLASS);
+  root.classList.toggle('dark', isDark);
+  // Reading a computed value makes the browser recalculate styles right now, so the new
+  // palette takes effect while transitions are still switched off.
+  window.getComputedStyle(document.body).getPropertyValue('color');
+  window.setTimeout(() => {
+    root.classList.remove(SWITCHING_CLASS);
+  }, 0);
 }
 
 export function useTheme(): [Theme, () => void] {

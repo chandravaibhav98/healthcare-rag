@@ -6,9 +6,12 @@ from pathlib import Path
 import pytest
 
 from app.domain.models import ExpandedQuery
+from app.rag.analysis import analyze
+from app.rag.index.bm25_store import BM25Index
 from app.rag.pipeline import load_index
 from app.rag.retrieval.expansion import QueryExpander
 from app.rag.retrieval.hybrid import HybridRetriever, RetrievalMode, reciprocal_rank_fusion
+from app.rag.retrieval.sparse import build_clauses
 
 # ---------------------------------------------------------------- RRF maths ----
 
@@ -60,7 +63,8 @@ def test_synonym_phrases_match_on_token_boundaries(expander: QueryExpander) -> N
     added = expander.expand("What is the order for taking off gloves?").added_terms
     assert "doffing" in added
     assert "taking off" not in added  # never re-adds what the question already says
-    assert expander.expand("A handover note").added_terms == ()  # "hand" is not "handrub"
+    # "hand" is not "handrub"
+    assert expander.expand("A handover note").added_terms == ()
 
 
 def test_expansion_is_deterministic_and_deduplicated(expander: QueryExpander) -> None:
@@ -125,8 +129,100 @@ def test_invalid_configuration(fixture_index_dir: Path) -> None:
         HybridRetriever(load_index(fixture_index_dir), rrf_k=0)
     with pytest.raises(ValueError, match="RRF weights"):
         HybridRetriever(load_index(fixture_index_dir), dense_weight=0.0, sparse_weight=0.0)
-    with pytest.raises(ValueError, match="zero RRF weight"):
-        HybridRetriever(load_index(fixture_index_dir), mode=RetrievalMode.DENSE, dense_weight=0.0)
+
+
+def test_single_retriever_modes_ignore_tuned_hybrid_weights(fixture_index_dir: Path) -> None:
+    """`--mode dense` is an ablation: a tuned dense vote of 0 must not disable it."""
+    r = HybridRetriever(load_index(fixture_index_dir), mode=RetrievalMode.DENSE, dense_weight=0.0)
+    assert r.weights == (1.0, 0.0)
+    hits = r.retrieve("glove removal", 3)
+    assert hits
+    assert all(h.dense_rank is not None and h.sparse_rank is None for h in hits)
+
+
+def test_expansion_counts_each_concept_once() -> None:
+    """Summed BM25 lets IPC's 3-word expansion outvote 'sterilization'; concepts do not."""
+    bm25 = BM25Index()
+    bm25.build(
+        [
+            ["ipc", "infect", "prevent", "control", "program"],  # IPC programme text
+            ["steril", "steril", "monitor"],  # sterilization text
+            ["glove"],
+            ["mask"],
+        ]
+    )
+    flat = bm25.search(["ipc", "infect", "prevent", "control", "steril", "autoclav"], 2)
+    assert flat[0][0] == 0
+    clauses = [(("ipc",), ("infect", "prevent", "control")), (("steril",), ("autoclav",))]
+    assert bm25.search_clauses(clauses, 2)[0][0] == 1
+
+
+def test_rare_synonym_does_not_outvote_the_common_one() -> None:
+    """Regression: under max-over-phrasings, one 'autoclave' beat three 'sterilization's.
+
+    'steril' is common (df 3) and 'autoclav' rare (df 1), so per-term IDF favours the
+    autoclave document. As one concept they share a df, and term frequency decides.
+    """
+    bm25 = BM25Index()
+    bm25.build(
+        [
+            ["steril", "steril", "steril", "monitor"],  # about sterilization
+            ["autoclav", "bag", "wast"],  # mentions an autoclave once
+            ["glove"],
+            ["mask"],
+            ["steril", "glove"],
+            ["steril", "mask"],
+        ]
+    )
+    assert bm25.search_clauses([(("steril",), ("autoclav",))], 2)[0][0] == 0
+
+
+def test_multi_term_phrasing_needs_all_its_terms() -> None:
+    bm25 = BM25Index()
+    bm25.build([["infect", "prevent", "team"], ["infect", "prevent", "control"], ["glove"]])
+    ranked = bm25.search_clauses([(("ipc",), ("infect", "prevent", "control"))], 3)
+    # "infection prevention team" is not IPC
+    assert [doc for doc, _ in ranked] == [1]
+
+
+def test_plain_search_is_single_term_clauses() -> None:
+    bm25 = BM25Index()
+    bm25.build([["a", "b"], ["b", "c", "c"], ["d"]])
+    terms = ["c", "b", "b"]
+    assert bm25.search(terms, 3) == bm25.search_clauses([(("b",),), (("c",),)], 3)
+
+
+def test_build_clauses_groups_expansions(expander: QueryExpander) -> None:
+    clauses = build_clauses("IPC measures for sterilisation", expander)
+    ipc = (tuple(analyze("ipc")), tuple(analyze("infection prevention and control")))
+    assert ipc in clauses
+    assert any(
+        tuple(analyze("sterilisation")) in c and tuple(analyze("sterilization")) in c
+        for c in clauses
+    )
+    assert ((analyze("measures")[0],),) in clauses
+    # inside its group, not counted twice
+    assert ((analyze("ipc")[0],),) not in clauses
+    assert build_clauses("IPC measures", None) == [((t,),) for t in analyze("IPC measures")]
+
+
+def test_expansion_recovers_a_spelling_the_corpus_does_not_use(corpus_index_dir: Path) -> None:
+    """The corpus is written in US spelling: 'sterilisation' only matches via its group.
+
+    Retrieval for a question where sterilisation is the only topic must reach the
+    sterilization documents through expansion, and must not without it.
+    """
+    index = load_index(corpus_index_dir)
+    question = "How is sterilisation monitored?"
+
+    def ster_hits(expander: QueryExpander | None) -> int:
+        hits = HybridRetriever(index, expander=expander, mode=RetrievalMode.SPARSE).retrieve(
+            question, 5
+        )
+        return sum("-ster-" in h.chunk.doc_id for h in hits)
+
+    assert ster_hits(QueryExpander.from_file()) >= 2
+    assert ster_hits(None) < ster_hits(QueryExpander.from_file())
 
 
 def test_zero_dense_vote_equals_sparse_mode(fixture_index_dir: Path) -> None:
