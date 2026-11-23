@@ -39,7 +39,13 @@ def _docker_available() -> bool:
     if os.environ.get("DOCKER_HOST"):
         return True
     if os.name == "nt":
-        return Path(r"\\.\pipe\docker_engine").exists()
+        try:
+            return Path(r"\\.\pipe\docker_engine").exists()
+        except OSError as exc:
+            # ERROR_PIPE_BUSY (231): the pipe exists and Docker Desktop is serving other
+            # clients. pathlib re-raises it instead of answering True, so every PostgreSQL
+            # test errored at setup exactly when Docker was running (manual test F-15).
+            return getattr(exc, "winerror", None) == 231
     return Path("/var/run/docker.sock").exists()
 
 
@@ -57,6 +63,10 @@ def postgres_server_url() -> Iterator[str]:
     # until interpreter exit, which would surface as an unclosed-socket error after the
     # run; the container is stopped explicitly below instead.
     os.environ.setdefault("TESTCONTAINERS_RYUK_DISABLED", "true")
+    if os.name == "nt":
+        # Docker Desktop publishes container ports on the host's loopback; with the npipe
+        # transport Testcontainers cannot always infer that host by itself.
+        os.environ.setdefault("TESTCONTAINERS_HOST_OVERRIDE", "localhost")
     from testcontainers.community.postgres import PostgresContainer
 
     container = PostgresContainer(PG_IMAGE, driver="asyncpg")

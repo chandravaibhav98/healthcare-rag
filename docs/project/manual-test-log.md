@@ -65,13 +65,28 @@ F-02 measured: 1 / 130 answered dev questions (0.8%), downgraded to Low.
 | P5-12 | ✅ ⚠️ | active version 6ce73ffaf982 (72 docs, 346 chunks, corpus/config hashes); bogus activate → 404; found F-11 (server path in the response) |
 | P5-13 | ✅ | production refuses the dev JWT secret, `LOG_QUESTION_TEXT=true` and CORS `*`, accepts a correct config; stateless mode: readyz ready (database `not_configured`), /qa validated, admin and auth 503 |
 
-## Phase 6: React frontend (2026-11-23, in progress)
+## Phase 6: React frontend (2026-11-23) ✅
 
 | ID | Result | Evidence |
 | --- | --- | --- |
 | Audit | ✅ | `npm --prefix e2e run audit` on a fresh seed: 12/12 flows ok; Lighthouse accessibility 100 on all 9 routes, best practices 96; axe serious/critical 0, moderate/minor 0. One console 404 (missing favicon) → F-13 |
 | Unit | ⚠️ | vitest 44/45: the first admin test timed out on the cold lazy import of the dashboard chunk (Windows) → F-14 |
 | P6-01…06 | ✅ | disclaimer; validated answer with meter, signals and citation chips; evidence highlighting; abstention + escalate; friendly error with the API down; history and copy |
+| P6-07…15 | ✅ | user → 403 on /admin; reviewer read-only (no Save/Activate/Run, no Audit Log); admin overview KPIs; review queue approve / correct / promote to gold; settings τ change previewed, saved, audited and restored to 0.6; evaluation run completes; keyboard-only navigation; dark mode and 375 px; Index shows 6ce73ffaf982 with no server path (F-11 confirmed in the UI) |
+
+## Phase 7: Test hardening and quality gates (2026-11-23, in progress)
+
+| ID | Result | Evidence |
+| --- | --- | --- |
+| P7-00 | ✅ | preflight READY (0 warnings): docker 29.6, kubectl 1.36, kind 0.33, k6 2.4, ffmpeg 9.1, pwsh 7.7; trivy local; gitleaks via Docker image |
+| P7-01 | ✅ | `scripts/test.sh --backend --frontend --coverage`: all gates passed; vitest 45/45, coverage statements 90.6% · branches 76.3% · lines 92.1% (gate ≥ 70%) |
+| P7-02 | ✅ | Playwright 20/20 in 35 s (a11y on 8 routes, admin, assistant, auth/RBAC) against a disposable seeded stack |
+| P7-05/06 | ✅ | "tests catch regressions", shown by real events during this test run rather than planted bugs: F-03 gate tripped the SC3 regression gates; contract snapshot caught the 1.3.2 bump; warnings-as-errors caught the deprecated `HTTP_422_UNPROCESSABLE_ENTITY`; F-11 path change broke the corrupted-index test |
+| P7-01b | ⚠️ | full backend with coverage: 506 passed, 1 xfailed, TOTAL coverage **97%** (64 files at 100%); **45 errors at setup of every `[postgres]` variant** with Docker running → F-15 |
+| P7-03 | ✅ | k6 smoke 10 VUs × 30 s: p95 26.5 ms, 0/296 failed. Gate 50 VUs × 5 min: **p95 51.3 ms** (gate 300), p99 73 ms, **0 / 14 635 failed**, 48.6 req/s |
+| P7-04 | ✅ | `security-scan.sh --strict`: pip-audit, npm audit, bandit, gitleaks (Docker), trivy fs (local 0.74.0; not a poisoned 0.69.4–0.69.6 build) all passed, no scanner skipped |
+
+Note: during E2E uvicorn logged "Unsupported upgrade request / no WebSocket library" (a client tried a WebSocket upgrade through the preview proxy). Harmless: the app uses no WebSockets.
 
 ## Next: quality re-test sprint (after Phase 12)
 
@@ -97,3 +112,4 @@ together on dev only and credited on a fresh test set (test-v3; test-v2 is spent
 | F-12 | Low (test tooling) | `e2e/audit/ui-audit.mjs` saved τ = 0.65 and left it, changing every later answer on the stack | ✅ Fixed: the audit restores 0.6 |
 | F-13 | Low (UI) | No favicon: `/favicon.ico` 404 on every page (the audit's only console error, best practices 96) | ✅ Fixed: inline SVG favicon (CSP already allows `data:` images) |
 | F-14 | Low (test reliability) | First admin vitest timed out on the cold lazy chunk; also `test_activating_a_corrupted_version…` read the server path that F-11 removed | ✅ Fixed: chunk warmed in `beforeAll`; test uses `IndexService.store_dir` |
+| F-15 | Medium (test coverage on Windows) | All 45 `[postgres]` tests errored at setup when Docker was running: `Path(r"\\.\pipe\docker_engine").exists()` raised `OSError [WinError 231] All pipe instances are busy` | Fix applied in `tests/persistence.py` (busy pipe = Docker available; host override on Windows); pending re-run |
