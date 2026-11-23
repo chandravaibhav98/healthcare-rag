@@ -87,5 +87,5 @@ frozen configuration and **re-run unchanged** for this submission.
    improve paraphrase handling while keeping the index deterministic.
 4. Connect sign-in to the organisation's identity provider (OIDC).
 
-*Details:* [evaluation report](evaluation-report.md) · [architecture](architecture.md) ·
-[API](api.md) · [RUNBOOK](../RUNBOOK.md) · decisions in [ADRs](adr/README.md).
+*Details:* [evaluation report](evaluation-report.md) · [architecture](Architecture.md) ·
+[API](API.md) · [RUNBOOK](../RUNBOOK.md) · decisions in [ADRs](adr/README.md).
