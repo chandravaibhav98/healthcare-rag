@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import re
 import uuid
 from datetime import date, datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_serializer, model_validator
+
+from app.domain.ids import ChunkId
 
 QueryStatus = Literal["validated", "needs_review"]
 Verdict = Literal["approve", "reject", "correct"]
@@ -110,8 +113,11 @@ class ReviewIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
     verdict: Verdict
     note: str = Field(default="", max_length=4000)
-    corrected_citations: list[str] = Field(
-        default_factory=list, max_length=20, description="chunk_ids that answer the question."
+    corrected_citations: list[ChunkId] = Field(
+        default_factory=list,
+        max_length=20,
+        description="chunk_ids that answer the question. Each must exist in the active index "
+        "(422 otherwise), because promoted corrections become gold-set labels.",
     )
     promote_to_gold: bool = Field(
         default=False, description="Export this item as a gold dev-set candidate."
@@ -154,7 +160,10 @@ class EvalRunDetail(EvalRunOut):
 class IndexVersionOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     version: str
-    path: str
+    path: str = Field(
+        description="Folder name of the index artifacts. The server's absolute path is "
+        "withheld, since reviewers can read this endpoint (manual test F-11)."
+    )
     document_count: int
     chunk_count: int
     source: Literal["boot", "store", "rebuild"]
@@ -163,6 +172,11 @@ class IndexVersionOut(BaseModel):
     activated_at: datetime | None
     corpus_hash: str | None = None
     config_hash: str | None = None
+
+    @field_serializer("path")
+    def _folder_name_only(self, path: str) -> str:
+        # Handles both separators: the API may run on Windows (dev) or Linux (containers).
+        return re.split(r"[\\/]", path.rstrip("\\/"))[-1]
 
 
 class RebuildStatus(BaseModel):

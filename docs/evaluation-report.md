@@ -24,6 +24,11 @@
 | Safety: false validations | ≤ 5% (plan) | 0.000 (0 / 22) | **0.167 (2 / 12)** | ❌ Not met on test-v2 (§6) |
 | SC4 REST contract | 0 violations | — | — | ✅ Met (Phase 3) |
 
+*These are the official Phase 12 results (test-v2 spent once). The current code adds
+concept-level query expansion and one hard dev question; its numbers, dev P@5 0.608 and
+test-v2 P@5 0.429 / pass rate 0.807 (informational), are in §4.3 and
+`docs/evaluation/test-v2-reproduction.json`.*
+
 Numbers in brackets are 95% percentile-bootstrap confidence intervals over questions
 (2,000 resamples, fixed seed).
 

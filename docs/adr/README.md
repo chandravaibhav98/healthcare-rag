@@ -21,7 +21,7 @@ supersedes it.
 | [0003](0003-deterministic-hashed-embeddings.md) | Deterministic 256-D hashed embeddings | **Accepted** (Phase 1) | SC1, SC2 |
 | [0004](0004-hybrid-retrieval-rrf.md) | Hybrid retrieval (FAISS + BM25, RRF) | **Accepted** (Phase 2); ranking default amended by 0011 | SC2 |
 | [0005](0005-faiss-index-flat-ip.md) | FAISS IndexFlatIP | **Accepted** (Phase 1) | SC1 |
-| [0006](0006-api-contract-and-error-format.md) | API contract (v1.3.1 submitted), additive meta, RFC 9457 errors | **Accepted** (Phase 12) | SC4 |
+| [0006](0006-api-contract-and-error-format.md) | API contract (v1.3.1 submitted, v1.3.3 current), additive meta, RFC 9457 errors | **Accepted** (Phase 12) | SC4 |
 | [0007](0007-abstention-response-policy.md) | Abstention response policy | **Accepted** (Phase 12) | SC3 |
 | [0008](0008-persistence-auth-index-distribution.md) | Persistence, auth, index distribution | **Accepted** (Phases 5 and 9) | — |
 | [0009](0009-healthcare-data-handling.md) | Healthcare data handling (PHI) | **Accepted** (Phases 0, 3, 5) | — |

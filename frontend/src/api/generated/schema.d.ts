@@ -748,7 +748,10 @@ export interface components {
         IndexVersionOut: {
             /** Version */
             version: string;
-            /** Path */
+            /**
+             * Path
+             * @description Folder name of the index artifacts. The server's absolute path is withheld, since reviewers can read this endpoint (manual test F-11).
+             */
             path: string;
             /** Document Count */
             document_count: number;
@@ -1204,7 +1207,7 @@ export interface components {
             note: string;
             /**
              * Corrected Citations
-             * @description chunk_ids that answer the question.
+             * @description chunk_ids that answer the question. Each must exist in the active index (422 otherwise), because promoted corrections become gold-set labels.
              */
             corrected_citations?: string[];
             /**

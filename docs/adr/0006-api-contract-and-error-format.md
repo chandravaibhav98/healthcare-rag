@@ -1,7 +1,8 @@
 # ADR-0006 — API contract strictness, additive `meta`, RFC 9457 errors
 
 - **Status:** Accepted (Phase 12). Contract v1.0 in Phase 0; **v1.1** in Phase 3 (Amendment 1); v1.3.1
-  is the submitted contract, every operation fuzzed with Schemathesis (Phase 7)
+  is the submitted contract, every operation fuzzed with Schemathesis (Phase 7); v1.3.2–1.3.3 are
+  manual-test fixes (F-01/F-05 descriptions; F-10 corrected_citations validated against the index)
 - **Date:** 2026-11-07
 - **Plan ref:** `plan.md` §3 ADR-006 · **Affects:** SC4, D1
 

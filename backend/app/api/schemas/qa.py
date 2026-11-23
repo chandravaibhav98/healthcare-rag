@@ -25,7 +25,10 @@ from app.domain.ids import CHUNK_ID_PATTERN, DOC_ID_PATTERN, INDEX_VERSION_PATTE
 # 1.3.2: documentation precision found in manual testing (Phase 3 re-test): `signals.retrieval_score`
 # is the absolute cosine similarity, not the rank-based fused score shown in `citations[].score`
 # (F-01); the documented 400 is an undecodable body, malformed JSON is a 422 (F-05).
-CONTRACT_VERSION: Final = "1.3.2"
+# 1.3.3: `POST /admin/reviews/{query_id}` rejects malformed or unknown corrected_citations
+# with 422 (manual test F-10); previously any string was stored and exported to the gold set.
+# Also: `IndexVersionOut.path` is the folder name only, not the server path (F-11).
+CONTRACT_VERSION: Final = "1.3.3"
 
 #: Fixed answer text when abstaining (ADR-0007). Clients may rely on it verbatim.
 ABSTENTION_MESSAGE: Final = (

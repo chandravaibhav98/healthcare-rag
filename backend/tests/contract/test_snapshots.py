@@ -46,7 +46,8 @@ def test_openapi_response_schema_keeps_the_four_spec_fields() -> None:
     # 1.3.2: `signals.retrieval_score` description corrected to absolute cosine similarity
     # (F-01) and the 400 described as an undecodable body (F-05). Manual testing, Phase 3
     # re-test. Description only, so a patch bump.
-    assert doc["info"]["version"] == "1.3.2"
+    # 1.3.3: corrected_citations must be existing chunk_ids (F-10), a validation fix.
+    assert doc["info"]["version"] == "1.3.3"
     for path in ("/qa", "/api/v1/qa", "/healthz", "/readyz", "/version"):
         assert path in doc["paths"], f"{path} must survive every 1.x release"
     assert "superseded" not in doc["components"]["schemas"]["Citation"].get("required", [])

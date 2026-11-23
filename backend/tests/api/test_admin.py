@@ -152,6 +152,33 @@ def test_review_queue_review_update_and_gold_export(api: AuthedClient) -> None:
 
 
 # --- statistics -------------------------------------------------------------------------------------
+def test_review_rejects_chunk_ids_not_in_the_active_index(api: AuthedClient) -> None:
+    """Manual test F-10: promoted corrections become gold labels, so their chunk_ids must
+    be well-formed (schema) and exist in the active index (route)."""
+    _seed_queries(api)
+    target = api.get(f"{PREFIX}/reviews", Role.REVIEWER).json()["items"][0]["query"]
+    url = f"{PREFIX}/reviews/{target['id']}"
+    malformed = api.post(
+        url, Role.REVIEWER, json={"verdict": "correct", "corrected_citations": ["not-a-chunk"]}
+    )
+    assert malformed.status_code == 422
+    ghost = "who-xyz-999::no-such-section::0001"
+    unknown = api.post(
+        url, Role.REVIEWER, json={"verdict": "correct", "corrected_citations": [ghost]}
+    )
+    assert unknown.status_code == 422
+    assert ghost in unknown.text
+
+
+def test_index_versions_do_not_disclose_server_paths(api: AuthedClient) -> None:
+    """Manual test F-11: reviewers can read index versions; the server path is withheld."""
+    items = api.get(f"{PREFIX}/index/versions", Role.REVIEWER).json()["items"]
+    assert items
+    for item in items:
+        assert "/" not in item["path"]
+        assert "\\" not in item["path"]
+
+
 def test_stats_window(api: AuthedClient) -> None:
     _seed_queries(api)
     stats = api.get(f"{PREFIX}/stats", Role.REVIEWER).json()
@@ -455,7 +482,6 @@ def test_rebuild_is_refused_in_production(db_app_factory: Any, sqlite_database_u
 
 def test_activating_a_corrupted_version_is_409_and_keeps_serving(api: AuthedClient) -> None:
     import shutil
-    from pathlib import Path
 
     assert api.post(f"{PREFIX}/index/rebuild").status_code == 202
     api.run(api.app.state.index_service.wait_for_rebuild)
@@ -466,7 +492,9 @@ def test_activating_a_corrupted_version_is_409_and_keeps_serving(api: AuthedClie
     )
     if row["is_active"]:
         pytest.skip("rebuild produced the boot version; nothing to corrupt safely")
-    path = Path(row["path"])
+    # The API returns only the folder name (F-11); the location comes from the service.
+    path = api.app.state.index_service.store_dir / version
+    assert row["path"] == version
     faiss = path / "index.faiss"
     data = bytearray(faiss.read_bytes())
     data[-1] ^= 0xFF

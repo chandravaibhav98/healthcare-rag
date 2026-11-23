@@ -92,6 +92,12 @@ class IndexService:
         self._rebuild_task: asyncio.Task[None] | None = None
         self._unavailable_logged: set[str] = set()
 
+    @property
+    def store_dir(self) -> Path:
+        """Where published versions live. Server-side only: the admin API returns folder
+        names, not paths (manual test F-11)."""
+        return self._store_dir
+
     def _candidates(self) -> list[tuple[Path, str]]:
         found = [(self._boot_dir, "boot")]
         if self._store_dir.is_dir():

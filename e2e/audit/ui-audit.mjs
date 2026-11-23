@@ -188,6 +188,13 @@ await step('settings: impact preview + save', async () => {
   await tid('config-save').click();
   await tid('config-saved').waitFor();
   await page.screenshot({ path: OUT + 'settings.png', fullPage: true });
+  // Restore the default so the audit leaves the stack as it found it (manual test F-12).
+  await page.reload();
+  await tid('preview-pass-rate').waitFor();
+  await tid('cfg-threshold').fill('0.6');
+  await tid('cfg-comment').fill('UI audit: restore 0.6');
+  await tid('config-save').click();
+  await tid('config-saved').waitFor();
 });
 await axe('settings');
 await step('audit log shows the UI actions', async () => {

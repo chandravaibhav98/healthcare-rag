@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from fastapi.responses import PlainTextResponse
 
-from app.api.deps import ActorDep, ReviewerDep, SessionDep, page_params
+from app.api.deps import ActorDep, RegistryDep, ReviewerDep, SessionDep, page_params
 from app.api.routes.admin._common import PREFIX, responses, to_page
 from app.api.schemas.admin import (
     Page,
@@ -161,12 +161,22 @@ async def review_query(
     reviewer: ReviewerDep,
     session: SessionDep,
     actor: ActorDep,
+    registry: RegistryDep,
     response: Response,
     query_id: uuid.UUID,
     body: ReviewIn,
 ) -> ReviewOut:
     if await query_repo.get(session, query_id) is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Query not found.")
+    # Promoted corrections become gold labels: an unknown chunk_id would silently corrupt
+    # the evaluation set (manual test F-10). The schema checks the format; this the existence.
+    known = {c.chunk_id for c in registry.current().index.chunks}
+    unknown = sorted(set(body.corrected_citations) - known)
+    if unknown:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            f"Unknown chunk_id(s) in the active index: {', '.join(unknown)}",
+        )
     review, created = await review_repo.upsert(
         session,
         query_id=query_id,

@@ -1,4 +1,4 @@
-# API reference (contract v1.3.1)
+# API reference (contract v1.3.3)
 
 The authoritative contract is the committed OpenAPI document
 [`backend/openapi.json`](../backend/openapi.json). Swagger UI is at `/docs` on a running
@@ -241,7 +241,7 @@ The weights must sum to 1. Other pods apply the change within `CONFIG_POLL_SECON
 curl -s http://localhost:8000/readyz
 # {"status": "ready", "checks": {"index": "ok", "database": "ok"}, "index_version": "6ce73ffaf982"}
 curl -s http://localhost:8000/version
-# {"build_version": "0.1.0", "contract_version": "1.3.1", "index_version": "6ce73ffaf982", "analysis_version": 2}
+# {"build_version": "0.1.0", "contract_version": "1.3.3", "index_version": "6ce73ffaf982", "analysis_version": 2}
 ```
 
 `/readyz` returns 503 when the index is not loaded or the database does not answer

@@ -3,7 +3,7 @@
   "info": {
     "title": "Healthcare Guidelines RAG Assistant",
     "description": "Citation-first, evidence-validated question answering over guideline documents.\n\n> ⚠️ All guideline content is **synthetic**. Not for clinical use.",
-    "version": "1.3.2"
+    "version": "1.3.3"
   },
   "paths": {
     "/api/v1/qa": {
@@ -3436,7 +3436,8 @@
           },
           "path": {
             "type": "string",
-            "title": "Path"
+            "title": "Path",
+            "description": "Folder name of the index artifacts. The server's absolute path is withheld, since reviewers can read this endpoint (manual test F-11)."
           },
           "document_count": {
             "type": "integer",
@@ -4452,12 +4453,13 @@
           },
           "corrected_citations": {
             "items": {
-              "type": "string"
+              "type": "string",
+              "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*::[a-z0-9]+(?:-[a-z0-9]+)*::\\d{4}$"
             },
             "type": "array",
             "maxItems": 20,
             "title": "Corrected Citations",
-            "description": "chunk_ids that answer the question."
+            "description": "chunk_ids that answer the question. Each must exist in the active index (422 otherwise), because promoted corrections become gold-set labels."
           },
           "promote_to_gold": {
             "type": "boolean",

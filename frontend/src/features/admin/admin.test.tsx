@@ -1,12 +1,18 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 
 import { expectNoSeriousA11yViolations } from '@/test/axe';
 import { renderApp } from '@/test/render';
 import { server } from '@/test/server';
 
 describe('Admin dashboard', () => {
+  // The dashboard is a lazily loaded chunk. Without warming it, the first test pays the cold
+  // import inside findBy*'s 1 s budget and fails on slower machines (seen on Windows).
+  beforeAll(async () => {
+    await import('./pages');
+  }, 30_000);
+
   it('overview shows KPIs, charts with text alternatives, topics and reasons', async () => {
     renderApp({ route: '/admin', role: 'reviewer' });
     expect(await screen.findByTestId('kpi-total')).toHaveTextContent('62');
