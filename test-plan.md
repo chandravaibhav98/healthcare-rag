@@ -1,6 +1,6 @@
 # Manual Test Plan — Healthcare Guidelines RAG Assistant
 
-**Status (2026-11-24):** Phases 0–9 complete; Phase 10 blocked on two owner decisions; Phase 11 recorded, review pending; **Phase 11b (frontend on local → Docker → Kubernetes) next**; Phase 12 on hold.
+**Status (2026-11-24):** Phases 0–9 complete; Phase 10 blocked on two owner decisions; Phase 11 recorded, review pending; **Phase 11b complete: 38/38 frontend checks pass on local, Docker and Kubernetes**; Phase 12 on hold.
 
 **Legend:** `[x]` ✅ passed · `[x]` ⚠️ passed, with a finding (see Open Items) · `[ ]` ❌ failed · `[ ]` ⬜ to do · `[ ]` ⏸️ on hold. Finding IDs (F-xx, OI-xx) refer to the register in `docs/project/manual-test-log.md`.
 
@@ -17,11 +17,11 @@
 | P6 | 15 | 0 | 0 | 0 | 0 |
 | P7 | 6 | 0 | 0 | 0 | 0 |
 | P8 | 7 | 4 | 0 | 0 | 0 |
-| P9 | 8 | 1 | 0 | 1 | 0 |
+| P9 | 9 | 1 | 0 | 0 | 0 |
 | P10 | 2 | 1 | 1 | 2 | 0 |
 | P11 | 2 | 0 | 0 | 2 | 0 |
 | P12 | 0 | 0 | 0 | 0 | 7 |
-| P11b (frontend on each deployment) | 0 | 0 | 0 | 38 | 0 |
+| P11b (frontend on each deployment) | 38 | 0 | 0 | 0 | 0 |
 
 ---
 
@@ -320,7 +320,7 @@ P7-05 and P7-06 are worth showing a reviewer: they show the tests actually catch
   *Result:* 20/20 through the Envoy gateway
 - [x] ✅ **P9-09** — `kubectl kustomize deploy/k8s/overlays/prod \| less` → *Pass if:* Renders without error, with a managed DB secret reference, TLS and larger resource limits  
   *Result:* 22 objects: ExternalSecret, TLS Gateway, HPA, 2 PDBs, 4 NetworkPolicies, no in-cluster postgres
-- [ ] ⬜ **P9-10** — `scripts/k8s-down.sh` → *Pass if:* Cluster removed  
+- [x] ✅ **P9-10** — `scripts/k8s-down.sh` → *Pass if:* Cluster removed  
   *Result:* cluster kept for Phase 11b; run `scripts/k8s-down.sh` afterwards
 
 ---
@@ -367,50 +367,57 @@ Same user journeys, run by hand in the browser on every way the app is deployed,
 
 ### Local dev (`P11b-L`)
 
-- [ ] ⬜ **P11b-L-01** — Open the web app. The clinical disclaimer banner and the teal favicon show; the footer shows contract **1.3.3** and index **6ce73ffaf982**
-- [ ] ⬜ **P11b-L-02** — Ask *“When should health workers perform hand hygiene?”* → **Validated** badge, confidence meter (≈ 0.84) with the 3 signals, clickable `[n]` chips; a chip opens the evidence panel with highlighted words
-- [ ] ⬜ **P11b-L-03** — Ask *“What is the capital of France?”* → **Needs review** with the standard abstention text; **Escalate** confirms
-- [ ] ⬜ **P11b-L-04** — Sign in as `user@` → no Dashboard link; `/admin` shows the 403 page
-- [ ] ⬜ **P11b-L-05** — Sign in as `reviewer@` → Overview, Review Queue, Queries, Evaluation, Index and Settings are **read-only**; **no Audit Log**; the escalation from step 3 is in the Review Queue — approve it
-- [ ] ⬜ **P11b-L-06** — Sign in as `admin@` → Overview KPIs and charts load; Settings: τ 0.65 shows the impact preview, save, the Audit Log shows the change, then **set τ back to 0.6**
-- [ ] ⬜ **P11b-L-07** — Index page: version 6ce73ffaf982, **no server path** anywhere; Documents lists 72
-- [ ] ⬜ **P11b-L-08** — Evaluation: **Run evaluation** completes and adds a row
-- [ ] ⬜ **P11b-L-09** — Reload the page: you stay signed in. DevTools → Application → Cookies: the refresh cookie is **HttpOnly**, **SameSite=Strict**, path `/api/v1/auth` (and **Secure** on Docker/Kubernetes)
-- [ ] ⬜ **P11b-L-10** — DevTools → Console: **no errors**. Network: every API call goes to the **same origin** (`/api/v1/…`), no CORS preflights
-- [ ] ⬜ **P11b-L-11** — Sign out → dashboard pages send you to sign-in
+- [x] ✅ **P11b-L-01** — Open the web app. The clinical disclaimer banner and the teal favicon show; the footer shows contract **1.3.3** and index **6ce73ffaf982**
+- [x] ✅ **P11b-L-02** — Ask *“When should health workers perform hand hygiene?”* → **Validated** badge, confidence meter (≈ 0.84) with the 3 signals, clickable `[n]` chips; a chip opens the evidence panel with highlighted words
+- [x] ✅ **P11b-L-03** — Ask *“What is the capital of France?”* → **Needs review** with the standard abstention text; **Escalate** confirms
+- [x] ✅ **P11b-L-04** — Sign in as `user@` → no Dashboard link; `/admin` shows the 403 page
+- [x] ✅ **P11b-L-05** — Sign in as `reviewer@` → Overview, Review Queue, Queries, Evaluation, Index and Settings are **read-only**; **no Audit Log**; the escalation from step 3 is in the Review Queue — approve it
+- [x] ✅ **P11b-L-06** — Sign in as `admin@` → Overview KPIs and charts load; Settings: τ 0.65 shows the impact preview, save, the Audit Log shows the change, then **set τ back to 0.6**
+- [x] ✅ **P11b-L-07** — Index page: version 6ce73ffaf982, **no server path** anywhere; Documents lists 72
+- [x] ✅ **P11b-L-08** — Evaluation: **Run evaluation** completes and adds a row
+- [x] ✅ **P11b-L-09** — Reload the page: you stay signed in. DevTools → Application → Cookies: the refresh cookie is **HttpOnly**, **SameSite=Strict**, path `/api/v1/auth` (and **Secure** on Docker/Kubernetes)
+- [x] ✅ **P11b-L-10** — DevTools → Console: **no errors**. Network: every API call goes to the **same origin** (`/api/v1/…`), no CORS preflights
+- [x] ✅ **P11b-L-11** — Sign out → dashboard pages send you to sign-in
 
 ### Docker Compose (`P11b-D`)
 
-- [ ] ⬜ **P11b-D-01** — Open the web app. The clinical disclaimer banner and the teal favicon show; the footer shows contract **1.3.3** and index **6ce73ffaf982**
-- [ ] ⬜ **P11b-D-02** — Ask *“When should health workers perform hand hygiene?”* → **Validated** badge, confidence meter (≈ 0.84) with the 3 signals, clickable `[n]` chips; a chip opens the evidence panel with highlighted words
-- [ ] ⬜ **P11b-D-03** — Ask *“What is the capital of France?”* → **Needs review** with the standard abstention text; **Escalate** confirms
-- [ ] ⬜ **P11b-D-04** — Sign in as `user@` → no Dashboard link; `/admin` shows the 403 page
-- [ ] ⬜ **P11b-D-05** — Sign in as `reviewer@` → Overview, Review Queue, Queries, Evaluation, Index and Settings are **read-only**; **no Audit Log**; the escalation from step 3 is in the Review Queue — approve it
-- [ ] ⬜ **P11b-D-06** — Sign in as `admin@` → Overview KPIs and charts load; Settings: τ 0.65 shows the impact preview, save, the Audit Log shows the change, then **set τ back to 0.6**
-- [ ] ⬜ **P11b-D-07** — Index page: version 6ce73ffaf982, **no server path** anywhere; Documents lists 72
-- [ ] ⬜ **P11b-D-08** — Evaluation: **Run evaluation** completes and adds a row
-- [ ] ⬜ **P11b-D-09** — Reload the page: you stay signed in. DevTools → Application → Cookies: the refresh cookie is **HttpOnly**, **SameSite=Strict**, path `/api/v1/auth` (and **Secure** on Docker/Kubernetes)
-- [ ] ⬜ **P11b-D-10** — DevTools → Console: **no errors**. Network: every API call goes to the **same origin** (`/api/v1/…`), no CORS preflights
-- [ ] ⬜ **P11b-D-11** — Sign out → dashboard pages send you to sign-in
-- [ ] ⬜ **P11b-D-12** — While signed in, run `docker compose --project-directory deploy/compose -f deploy/compose/docker-compose.yml restart api`: the UI shows a friendly error for a few seconds, then works again without signing in again
-- [ ] ⬜ **P11b-D-13** — `scripts/docker-down.sh` then `scripts/docker-up.sh --no-build`: the review you saved in D-05 is still there (data persisted)
+*Bring-up 2026-11-24:* `docker-down --volumes` → `docker-up --demo`: images built, postgres/api/web healthy, demo seed (3 accounts, 62 queries), smoke through nginx 7/7 PASS, index 6ce73ffaf982.
+
+- [x] ✅ **P11b-D-01** — Open the web app. The clinical disclaimer banner and the teal favicon show; the footer shows contract **1.3.3** and index **6ce73ffaf982**
+- [x] ✅ **P11b-D-02** — Ask *“When should health workers perform hand hygiene?”* → **Validated** badge, confidence meter (≈ 0.84) with the 3 signals, clickable `[n]` chips; a chip opens the evidence panel with highlighted words
+- [x] ✅ **P11b-D-03** — Ask *“What is the capital of France?”* → **Needs review** with the standard abstention text; **Escalate** confirms
+- [x] ✅ **P11b-D-04** — Sign in as `user@` → no Dashboard link; `/admin` shows the 403 page
+- [x] ✅ **P11b-D-05** — Sign in as `reviewer@` → Overview, Review Queue, Queries, Evaluation, Index and Settings are **read-only**; **no Audit Log**; the escalation from step 3 is in the Review Queue — approve it
+- [x] ✅ **P11b-D-06** — Sign in as `admin@` → Overview KPIs and charts load; Settings: τ 0.65 shows the impact preview, save, the Audit Log shows the change, then **set τ back to 0.6**
+- [x] ✅ **P11b-D-07** — Index page: version 6ce73ffaf982, **no server path** anywhere; Documents lists 72
+- [x] ✅ **P11b-D-08** — Evaluation: **Run evaluation** completes and adds a row
+- [x] ✅ **P11b-D-09** — Reload the page: you stay signed in. DevTools → Application → Cookies: the refresh cookie is **HttpOnly**, **SameSite=Strict**, path `/api/v1/auth` (and **Secure** on Docker/Kubernetes)
+- [x] ✅ **P11b-D-10** — DevTools → Console: **no errors**. Network: every API call goes to the **same origin** (`/api/v1/…`), no CORS preflights
+- [x] ✅ **P11b-D-11** — Sign out → dashboard pages send you to sign-in
+- [x] ✅ **P11b-D-12** — While signed in, run `docker compose --project-directory deploy/compose -f deploy/compose/docker-compose.yml restart api`: the UI shows a friendly error for a few seconds, then works again without signing in again  
+  *Result:* CLI: `restart api` completed. UI showed a friendly error, then recovered without signing in again ✅
+- [x] ✅ **P11b-D-13** — `scripts/docker-down.sh` then `scripts/docker-up.sh --no-build`: the review you saved in D-05 is still there (data persisted)  
+  *Result:* CLI: `docker-down` (volumes kept) → `docker-up --no-build`: seed reports `admin exists (unchanged)`, 3 accounts, smoke passed, so the database survived. the D-05 review is still present in the UI ✅
 
 ### Kubernetes on kind (`P11b-K`)
 
-- [ ] ⬜ **P11b-K-01** — Open the web app. The clinical disclaimer banner and the teal favicon show; the footer shows contract **1.3.3** and index **6ce73ffaf982**
-- [ ] ⬜ **P11b-K-02** — Ask *“When should health workers perform hand hygiene?”* → **Validated** badge, confidence meter (≈ 0.84) with the 3 signals, clickable `[n]` chips; a chip opens the evidence panel with highlighted words
-- [ ] ⬜ **P11b-K-03** — Ask *“What is the capital of France?”* → **Needs review** with the standard abstention text; **Escalate** confirms
-- [ ] ⬜ **P11b-K-04** — Sign in as `user@` → no Dashboard link; `/admin` shows the 403 page
-- [ ] ⬜ **P11b-K-05** — Sign in as `reviewer@` → Overview, Review Queue, Queries, Evaluation, Index and Settings are **read-only**; **no Audit Log**; the escalation from step 3 is in the Review Queue — approve it
-- [ ] ⬜ **P11b-K-06** — Sign in as `admin@` → Overview KPIs and charts load; Settings: τ 0.65 shows the impact preview, save, the Audit Log shows the change, then **set τ back to 0.6**
-- [ ] ⬜ **P11b-K-07** — Index page: version 6ce73ffaf982, **no server path** anywhere; Documents lists 72
-- [ ] ⬜ **P11b-K-08** — Evaluation: **Run evaluation** completes and adds a row
-- [ ] ⬜ **P11b-K-09** — Reload the page: you stay signed in. DevTools → Application → Cookies: the refresh cookie is **HttpOnly**, **SameSite=Strict**, path `/api/v1/auth` (and **Secure** on Docker/Kubernetes)
-- [ ] ⬜ **P11b-K-10** — DevTools → Console: **no errors**. Network: every API call goes to the **same origin** (`/api/v1/…`), no CORS preflights
-- [ ] ⬜ **P11b-K-11** — Sign out → dashboard pages send you to sign-in
-- [ ] ⬜ **P11b-K-12** — Keep asking questions while `kubectl --context kind-healthcare-rag -n healthcare-rag rollout restart deployment/api deployment/web` runs: no error appears in the UI
-- [ ] ⬜ **P11b-K-13** — Ask the same question 5 times: identical answer and confidence every time (2 stateless API replicas behind the gateway)
-- [ ] ⬜ **P11b-K-14** — Finish with `scripts/k8s-down.sh` (also closes P9-10)
+*Bring-up 2026-11-24:* `k8s-up --recreate`: 3-node kind cluster, Envoy Gateway v1.10.0, metrics-server; `kind load` of `postgres:18-alpine` failed again and the F-20 fallback (`ctr import` per node) recovered it; migrate and seed Jobs complete; api 2/2, web 2/2, postgres 1/1; smoke through the gateway 7/7 PASS, index 6ce73ffaf982.
+
+- [x] ✅ **P11b-K-01** — Open the web app. The clinical disclaimer banner and the teal favicon show; the footer shows contract **1.3.3** and index **6ce73ffaf982**
+- [x] ✅ **P11b-K-02** — Ask *“When should health workers perform hand hygiene?”* → **Validated** badge, confidence meter (≈ 0.84) with the 3 signals, clickable `[n]` chips; a chip opens the evidence panel with highlighted words
+- [x] ✅ **P11b-K-03** — Ask *“What is the capital of France?”* → **Needs review** with the standard abstention text; **Escalate** confirms
+- [x] ✅ **P11b-K-04** — Sign in as `user@` → no Dashboard link; `/admin` shows the 403 page
+- [x] ✅ **P11b-K-05** — Sign in as `reviewer@` → Overview, Review Queue, Queries, Evaluation, Index and Settings are **read-only**; **no Audit Log**; the escalation from step 3 is in the Review Queue — approve it
+- [x] ✅ **P11b-K-06** — Sign in as `admin@` → Overview KPIs and charts load; Settings: τ 0.65 shows the impact preview, save, the Audit Log shows the change, then **set τ back to 0.6**
+- [x] ✅ **P11b-K-07** — Index page: version 6ce73ffaf982, **no server path** anywhere; Documents lists 72
+- [x] ✅ **P11b-K-08** — Evaluation: **Run evaluation** completes and adds a row
+- [x] ✅ **P11b-K-09** — Reload the page: you stay signed in. DevTools → Application → Cookies: the refresh cookie is **HttpOnly**, **SameSite=Strict**, path `/api/v1/auth` (and **Secure** on Docker/Kubernetes)
+- [x] ✅ **P11b-K-10** — DevTools → Console: **no errors**. Network: every API call goes to the **same origin** (`/api/v1/…`), no CORS preflights
+- [x] ✅ **P11b-K-11** — Sign out → dashboard pages send you to sign-in
+- [x] ✅ **P11b-K-12** — Keep asking questions while `kubectl --context kind-healthcare-rag -n healthcare-rag rollout restart deployment/api deployment/web` runs: no error appears in the UI  
+  *Result:* CLI: `rollout restart` of api and web completed (2/2 api replicas). no errors in the UI during the rollout ✅
+- [x] ✅ **P11b-K-13** — Ask the same question 5 times: identical answer and confidence every time (2 stateless API replicas behind the gateway)
+- [x] ✅ **P11b-K-14** — Finish with `scripts/k8s-down.sh` (also closes P9-10)
 
 ---
 
@@ -452,7 +459,7 @@ Results are ticked inline above. The full evidence (commands, outputs, CI run ID
 | OI-39 (P10-03) | Branch rulesets are not enforced: the repository is private on GitHub Free, and a direct push to `main` succeeded | Make the repository public, upgrade to GitHub Pro, or document and accept. Then `scripts/github-protect.sh` and re-test P10-03 |
 | PR merge (P10-05/06) | `ci-passed` is red only because of F-19 | Wait for the upstream nginx fix (recommended), or merge with the red check acknowledged |
 | F-19 | Fixable CRITICAL CVEs in `rag-web` (nginx 1.30.6-r1 from nginx.org; brotli fixed via `apk upgrade`) | **Decided: wait for upstream** (option A). Re-check with `scripts/docker-rebuild.sh --no-cache` + `scripts/security-scan.sh --images` |
-| Licensing | Handoff: the MIT licence is removed; the client chooses the licence | Client decision; third-party notices stay |
+| Licensing | Handoff: license is removed; the client chooses the license | Client decision; third-party notices stay |
 | SC2 reading | Literal P@5 ≥ 0.65 is unreachable with honest labels (ceiling 0.83 dev / 0.58 test) | Mentor decision: literal P@5 or P@5 relative to the ceiling (ADR-0001) |
 | ADR-0001 annotation | Second-person spot-check of ≥ 20 % of gold labels | P4-05 checked 5 test items (all correct); more needed |
 
@@ -470,8 +477,8 @@ Results are ticked inline above. The full evidence (commands, outputs, CI run ID
 
 ### Tests still to run
 
-- [ ] Phase 11b — Re-test frontend on local, Docker and Kubernetes (38 checks)
-- [ ] P9-10 — `scripts/k8s-down.sh` after Phase 11b
+- [x] Phase 11b — Re-test frontend on local, Docker and Kubernetes (38 checks)
+- [x] P9-10 — `scripts/k8s-down.sh` after Phase 11b
 - [ ] P11-02 / P11-03 — watch the demo video (check chapter 4 for 2–8 °C), record a second time
 - [ ] P8-11 — open the Grafana RAG dashboard once
 - [ ] P10-03, P10-05, P10-06 — after the owner decisions above
@@ -479,6 +486,6 @@ Results are ticked inline above. The full evidence (commands, outputs, CI run ID
 
 ### Housekeeping
 
-- [x] Remove the unused real `OPENAI_API_KEY` from `.env` (`GENERATOR=extractive`)
-- [x] `SEED_ADMIN_PASSWORD` in `.env` is 9 characters; production requires ≥ 12
-- [ ] Ensure Application is Offline Compatible with default configurations
+- [x] Remove the unused real `OPENAI_API_KEY` from `.env` (`GENERATOR=extractive`). Blanked 2026-11-24; `.env` is git-ignored and was never committed
+- [ ] Revoke that key in the OpenAI dashboard (it sat in plain text in `.env`)
+- [x] `SEED_ADMIN_PASSWORD` in `.env` is 9 characters; production requires ≥ 12. Now 13 characters

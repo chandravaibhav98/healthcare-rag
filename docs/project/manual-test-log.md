@@ -138,6 +138,23 @@ Note: during E2E uvicorn logged "Unsupported upgrade request / no WebSocket libr
 | P11-01 | ✅ | `demo-record.sh --gif` from a cold start (index built from corpus, fresh seeded API, production SPA): `artifacts/demo/healthcare-rag-demo-20261123-192303.mp4` (5.4 MB), 12 s GIF teaser (329 KB), chapters file; index 6ce73ffaf982 |
 | P11-04 | ✅ | ffprobe: h264, 1920×1080, 25 fps, 195 s; 11 embedded chapters (10 storyboard steps + Summary) |
 
+## Phase 11b: Frontend on each deployment (2026-11-24) ✅
+
+| ID | Result | Evidence |
+| --- | --- | --- |
+| Docker bring-up | ✅ | `docker-down --volumes` → `docker-up --demo`: all three images built, `postgres`, `api`, `web` healthy, `migrate` and `indexer` exited 0; demo seed: 3 accounts, 62 queries (45 validated, 17 needs_review, 2 redacted); `smoke.py` through nginx 7/7 PASS, index 6ce73ffaf982 |
+| D-12 | ✅ | `docker compose … restart api`: friendly error for a few seconds, then the UI recovered without a new sign-in |
+| D-13 (CLI) | ✅ | `docker-down` (volumes kept) → `docker-up --no-build`: `admin exists (unchanged)`, 3 accounts in database, smoke 7/7 PASS; the review from D-05 still present |
+| Kubernetes bring-up | ✅ | `k8s-up --recreate`: kind 3 nodes (v1.37.0), Envoy Gateway v1.10.0, metrics-server v0.9.1; images tagged by digest (`rag-api:6877f0471c1a`, `rag-web:12734c775957`); **F-20 fix confirmed**: `kind load postgres:18-alpine` failed with `content digest … not found` and the per-node `ctr import --platform linux/amd64` fallback recovered; migrate + seed Jobs complete; api 2/2, web 2/2, postgres 1/1; gateway smoke 7/7 PASS, index 6ce73ffaf982 |
+| K-12 | ✅ | `rollout restart deployment/api deployment/web` under manual use: no UI errors |
+| Local L-01…L-11 | ✅ | Owner walkthrough on Vite :5173 |
+| Docker D-01…D-11 | ✅ | Owner walkthrough on nginx :8080 (Secure refresh cookie, same-origin API) |
+| Kubernetes K-01…K-11, K-13 | ✅ | Owner walkthrough on Envoy Gateway :8088; 5 identical answers across 2 replicas |
+| K-14 / P9-10 | ✅ | `scripts/k8s-down.sh`: cluster removed |
+| **Total** | **38 / 38** | |
+
+Note: smoke confidence is 0.860528 (smoke question); the hand-hygiene question in the checklist is expected at ≈ 0.838923.
+
 ## Next: quality re-test sprint (after Phase 12)
 
 F-03, F-04, F-07, F-08, F-09 and OI-27 all change generation or validation. They are tuned
