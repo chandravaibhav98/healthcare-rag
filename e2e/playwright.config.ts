@@ -89,7 +89,10 @@ export default defineConfig({
           stdout: 'pipe',
         },
         {
-          command: `npm --prefix ../frontend run -s build && npm --prefix ../frontend run -s preview -- --port ${WEB_PORT.toString()} --strictPort`,
+          // --host: bind the address Playwright polls. Without it Vite binds "localhost", which
+          // Node can resolve to ::1 only, and the 127.0.0.1 readiness probe never answers
+          // (manual test F-23: CI timed out after 120 s with the server running).
+          command: `npm --prefix ../frontend run -s build && npm --prefix ../frontend run -s preview -- --host 127.0.0.1 --port ${WEB_PORT.toString()} --strictPort`,
           url: `http://127.0.0.1:${WEB_PORT.toString()}`,
           timeout: 120_000,
           reuseExistingServer: false,

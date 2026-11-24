@@ -14,7 +14,7 @@ repository ([RUNBOOK §4](RUNBOOK.md#4-swapping-in-a-secure-real-guideline-repos
 
 **Start here:** [technical summary](docs/technical-summary.md) (2–3 pages, for
 stakeholders) · [evaluation report](docs/evaluation-report.md) ·
-[architecture](docs/architecture.md) · [API](docs/api.md) · [RUNBOOK](RUNBOOK.md) ·
+[architecture](docs/Architecture.md) · [API](docs/API.md) · [RUNBOOK](RUNBOOK.md) ·
 [decisions (ADRs)](docs/adr/README.md) · demo video: attached to every
 [GitHub Release](docs/releasing.md), or run `scripts/demo-record.sh`.
 
@@ -55,7 +55,7 @@ React SPA ─HTTPS─► Gateway / nginx ─► FastAPI (stateless, 2–6 pods) 
                                         ◄── rag-index:<version> (immutable image, built by CI from corpus/)
 ```
 
-Details: [architecture](docs/architecture.md) · [plan](plan.md).
+Details: [architecture](docs/Architecture.md) · [plan](plan.md).
 
 ## Quick start
 
@@ -184,17 +184,45 @@ sync). The ones you are most likely to change:
 
 ## Project status
 
-All 13 phases of [`plan.md`](plan.md) are delivered. Each has a report in
+Phases 0–11 of [`plan.md`](plan.md) are delivered. Phase 12 (final review) is re-opened until the manual frontend walkthrough on each deployment target is done, and Phase 13 (handoff documentation clean-up) is in progress; see [`test-plan.md`](test-plan.md). Each has a report in
 [`docs/project/`](docs/project/), ending with the
 [final review](docs/project/phase-12-report.md). Open items: ADR-0001 and ADR-0002
 await mentor sign-off, and the SC2 reading is a pending decision
 ([technical summary §5](docs/technical-summary.md#5-decisions-needed)). Further open
 issues are in `plan.md` §10.
 
+## Documentation
+
+| Document | Covers |
+| --- | --- |
+| [Requirements](docs/Requirements.md) | Problem, functional and non-functional requirements, success criteria |
+| [Architecture](docs/Architecture.md) | Context, request sequence, modules, data, deployment, quality attributes |
+| [Tech stack](docs/Tech-Stack.md) | Languages, frameworks and tools with pinned versions |
+| [Backend](docs/Backend.md) | FastAPI layers, the `/qa` pipeline, configuration, backend tests |
+| [Frontend](docs/Frontend.md) | React app structure, screens, auth, accessibility |
+| [API](docs/API.md) | Endpoints, contract versions, examples, errors |
+| [Database](docs/Database.md) | Tables, migrations, retention, seeding |
+| [Data](docs/Data.md) | Synthetic corpus, index artifacts, gold evaluation sets |
+| [Development](docs/Development.md) | Setup, daily loop, branching, Windows notes |
+| [Scripts](docs/Scripts.md) | Every ops script and its flags |
+| [E2E](docs/E2E.md) | Playwright E2E, demo video, load test, manual testing |
+| [Deployment](docs/Deployment.md) | Local, Docker Compose, Kubernetes, production overlay |
+| [Deliverables](docs/Deliverables.md) | Brief deliverables mapped to code and status |
+| [Roadmap](docs/Roadmap.md) | Open decisions, quality work, backlog |
+| [Evaluation report](docs/evaluation-report.md) | Method, results, ablations, limitations |
+| [Technical summary](docs/technical-summary.md) | Two-page overview for stakeholders |
+| [RUNBOOK](RUNBOOK.md) | Operations, releases, swapping in a real guideline repository |
+| [Releasing](docs/releasing.md) | CI/CD, branch protection, release process |
+| [ADRs](docs/adr/README.md) | Architecture decisions |
+| [Test plan](test-plan.md) | Manual test checklist per phase and deployment target, open items |
+| [Project reports](docs/project/) | Phase reports and the manual test log |
+
 ## Contributing and licence
 
 [CONTRIBUTING.md](CONTRIBUTING.md) (trunk-based, Conventional Commits, `ci-passed`
 required). Releases: [docs/releasing.md](docs/releasing.md).
 
-MIT, see [LICENSE](LICENSE). Third-party software in the images and web bundle:
-[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+**Licence: not yet granted.** This repository is prepared for handoff, and the licence is
+the client's choice. Until the client adds one, no licence is granted and all rights are
+reserved by the copyright holder. Third-party software in the images and web bundle keeps
+its own licences: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

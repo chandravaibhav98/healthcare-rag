@@ -14,7 +14,7 @@
 | Real source text | None copied. Wording is original. Facts reflect widely published IPC concepts at a general level |
 | Change policy | Frozen. Never regenerated at build time (SC1). Edits are deliberate commits and change `index_version` |
 | v2 (2026-11-12, Phase 4) | 30 documents added: WHO pocket guides, CDC quick references and NIH ward procedures (§2a) |
-| Licence | Same as the repository |
+| Licence | None granted yet; the client chooses at handoff (see the README) |
 
 ## 2. Shape
 

@@ -321,11 +321,11 @@ jobs:
           provenance: false
       - id: save
         run: bash scripts/ci/save-images.sh artifacts/images
+      # Sum of the layer sizes, not `docker image inspect .Size`: with the containerd image
+      # store (Docker Desktop, and the default for new Docker Engine 29 installs) .Size also
+      # counts the stored compressed layers, ~20% more for the same image (manual test F-18).
       - name: Image size budget (rag-api < 400 MB)
-        run: |
-          size=$(docker image inspect rag-api:local --format '{{.Size}}')
-          echo "rag-api: $((size / 1024 / 1024)) MB"
-          test "$size" -lt $((400 * 1024 * 1024))
+        run: bash scripts/ci/image-size.sh rag-api:local 400
       # Kept for one day: long enough for the test jobs and release.yml, small on storage.
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:

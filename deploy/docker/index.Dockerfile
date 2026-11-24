@@ -49,7 +49,8 @@ RUN CHUNK_MIN_TOKENS=${CHUNK_MIN_TOKENS} CHUNK_MAX_TOKENS=${CHUNK_MAX_TOKENS} \
 
 FROM ${RUNTIME_IMAGE} AS runtime
 LABEL org.opencontainers.image.title="rag-index" \
-      org.opencontainers.image.description="Versioned RAG index built from the synthetic corpus; see /index/manifest.json"
+      org.opencontainers.image.description="Versioned RAG index built from the synthetic corpus; see /index/manifest.json" \
+      org.opencontainers.image.licenses="UNLICENSED"
 COPY --from=build --chown=65534:65534 /index /index
 # /target exists and is owned by the copying user, so a new Docker named volume mounted
 # there inherits that owner (Kubernetes uses an emptyDir with fsGroup instead).

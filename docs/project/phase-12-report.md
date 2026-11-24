@@ -24,8 +24,8 @@
 | … retrieved text as data, not instructions | §5 |
 | … operations: metrics, **7 alert rules** (each with a runbook entry), log queries, PHI-redaction check, retention, backups, routines | §6 |
 | … scaling path FlatIP → IVF/HNSW → external store, with recall and determinism conditions | §7 |
-| Architecture (context, request sequence, modules, data, deployment, quality attributes) | `docs/architecture.md` |
-| API reference with **real** captured requests and responses | `docs/api.md` |
+| Architecture (context, request sequence, modules, data, deployment, quality attributes) | `docs/Architecture.md` |
+| API reference with **real** captured requests and responses | `docs/API.md` |
 | ADRs finalised: 0006, 0007, 0008 accepted; 0001, 0002 await mentor sign-off (owner recommends accepting) | `docs/adr/` |
 | Evaluation report: final, re-run in Phase 12, reproduction section | `docs/evaluation-report.md` |
 | Technical summary for stakeholders (problem, approach, results against criteria, risks, decisions needed, next steps) | `docs/technical-summary.md` |
@@ -62,7 +62,7 @@ phase), with no artifacts, caches or environments:
 | 2 | Fresh clone on **Windows** (Git Bash and PowerShell) | ⏳ **Owner.** Commands in the final message; CI's `windows-2025` jobs cover setup, lint, unit tests and SC1 parity on every PR |
 | 3 | All scripts working | ✅ 28 `.sh` + `.ps1` pairs answer `--help`. Every script is exercised by CI, a phase verification or §2. The plan's `e2e` and `format` rows map to `test --e2e` and `lint --fix` (plan §5 updated) |
 | 4 | No secrets in history | ✅ `gitleaks git` over **all 16 commits of the owner's repository** (from a `git bundle` of it): no leaks. No `.env`, key or credential file was ever committed. detect-secrets runs as a pre-commit hook and in CI |
-| 5 | Licence | ✅ MIT (owner's choice), `LICENSE`. `pyproject.toml` says MIT |
+| 5 | Licence | ✅ MIT (owner's choice) at Phase 12. **Superseded 2026-11-24:** the MIT licence was removed for handoff; the licence is the client's choice (README) |
 | 6 | Third-party notices | ✅ Generated. All runtime dependencies are permissive (MIT, BSD, ISC, Apache-2.0, PSF, 0BSD). The only copyleft component is BusyBox (GPL-2.0) in the `rag-index` base image, with a source pointer |
 | 7 | Docs build and links | ✅ Every relative link in README, RUNBOOK, CONTRIBUTING, plan and `docs/` resolves; the alert test checks that each alert's RUNBOOK entry exists |
 | 8 | Alert rules | ✅ `promtool check rules` + 2 unit-test groups (healthy traffic stays quiet; each failure fires with the expected annotations); Compose config validated |

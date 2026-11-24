@@ -149,7 +149,7 @@ healthcare-rag/
 │   ├── compose/ docker-compose.yml · docker-compose.observability.yml
 │   └── k8s/ base/ · overlays/local/ · overlays/prod/
 ├── scripts/                              # ops automation (.sh + .ps1), see §5
-├── docs/ adr/ · architecture.md · api.md · evaluation-report.md · technical-summary.md
+├── docs/ adr/ · Architecture.md · API.md · evaluation-report.md · technical-summary.md
 ├── .github/workflows/ ci.yml · release.yml
 ├── .gitattributes · .editorconfig · .env.example
 ├── README.md · RUNBOOK.md · plan.md
@@ -646,7 +646,7 @@ tag:   release notes → prod overlay manifests rendered as an artifact
   - [x] Treating retrieved text as **data, not instructions** (prompt-injection posture, relevant if the LLM generator is enabled)
   - [x] Operations: alerts (abstention spike, latency, readiness failures), log queries, PHI-redaction verification, retention (7 alert rules, unit-tested with promtool, shipped for Compose and the Prometheus Operator)
   - [x] Scaling path: when to move from `IndexFlatIP` to IVF/HNSW or an external vector database
-- [x] `docs/architecture.md`, `docs/api.md` (with examples), finalised ADRs (all accepted except ADR-0001/0002, which await mentor sign-off)
+- [x] `docs/Architecture.md`, `docs/API.md` (with examples), finalised ADRs (all accepted except ADR-0001/0002, which await mentor sign-off)
 - [x] `docs/evaluation-report.md` (final numbers, confidence intervals, ablations, limitations)
 - [x] **`docs/technical-summary.md`** (2–3 pages for stakeholders: problem, approach, results against criteria, risks, next steps)
 - [x] Submission bundle: tagged release, images, evaluation logs, low-confidence list, demo MP4, Playwright report (`scripts/reproduce.*` builds it locally; a `v*` tag publishes images, manifests, SBOMs and the demo)
@@ -659,8 +659,52 @@ tag:   release notes → prod overlay manifests rendered as an artifact
   and both evaluation splits, equal to their records. They also run the E2E suite,
   record the demo video and write the submission bundle.
 - Final docs: README, RUNBOOK, architecture, API, evaluation report, technical summary.
-- MIT licence and third-party notices; no secrets in the history.
+- Third-party notices; no secrets in the history. Project licence: removed for handoff, the client chooses (2026-11-24; was MIT).
 - See `docs/project/phase-12-report.md`.
+
+**Re-opened (2026-11-24):** on hold until the manual Phase 11b walkthrough (frontend on
+local → Docker → Kubernetes, `test-plan.md`) is complete. Phase 13 then closes it.
+
+---
+
+### Phase 13 — Handoff: documentation update & clean-up · *S–M*
+
+**Objective:** leave the client a repository they can own without the original team:
+one documentation set with an index, no stale or contradictory pages, and no licensing
+decision made on their behalf.
+
+**Key decisions**
+
+- **One index:** the README "Documentation" table is the entry point. Every topic has one
+  canonical page in `docs/`; folder READMEs keep only what is specific to that folder and
+  link to the canonical page.
+- **Naming:** canonical pages use `Title-Case.md` (`API.md`, `Architecture.md`,
+  `Backend.md`, …). Renames are made with `git mv` so history follows the file.
+- **Project history stays, but is marked as history:** `docs/project/` (phase reports,
+  manual test log, working agreements) is kept as evidence and labelled as not
+  maintained.
+- **Licence:** none is granted; the client chooses. Third-party notices stay.
+
+**Deliverables checklist**
+
+- [x] Canonical docs added: Requirements, Tech-Stack, Backend, Frontend, Database, Data,
+      Development, Scripts, E2E, Deployment, Deliverables (optional), Roadmap (optional)
+- [x] README "Documentation" index linking every canonical doc
+- [x] Links updated from `docs/api.md` / `docs/architecture.md` to `docs/API.md` / `docs/Architecture.md`
+- [x] Project licence removed (`LICENSE`, `pyproject.toml`, README, image labels set to `UNLICENSED`); `THIRD_PARTY_NOTICES` kept
+- [ ] Case-only renames committed with `git mv -f` (owner)
+- [ ] Trim folder READMEs (`backend/`, `frontend/`, `e2e/`, `deploy/`) to folder-specific notes plus a link to the canonical doc
+- [ ] Re-check every page against the code after Phase 11b fixes (ports, routes, versions, counts such as tests and corpus size)
+- [ ] Link check across all markdown (no broken relative links, correct letter case for GitHub)
+- [ ] Mark `docs/project/` as historical in its own README; move superseded notes (`docs/spikes/`) under it or delete them
+- [ ] Remove personal or environment-specific content (local paths, demo passwords beyond `.env.example`, stray files)
+- [x] `CORPUS_CARD.md` licence row updated
+- [ ] Hand over open decisions in one place: `docs/Roadmap.md` and the `test-plan.md` Open Items
+- [ ] Handoff note: who owns what next, how to run `scripts/reproduce.sh`, where the release artefacts are
+
+**Exit criteria:** a new engineer can go from the README index to a running stack, a
+passing test suite and the evaluation numbers without asking anyone, and every page
+they read matches the code.
 
 ---
 
@@ -735,6 +779,7 @@ tag:   release notes → prod overlay manifests rendered as an artifact
 | **M2 — Product complete** | 5 → 7 | Admin APIs, React assistant and dashboard, full test pyramid |
 | **M3 — Deployable** | 8 → 10 | Compose, kind/k8s, CI/CD with gates |
 | **M4 — Submission** | 11 → 12 | Demo MP4, RUNBOOK, technical summary, release |
+| **M5 — Handoff** | 11b → 13 | Frontend verified on every target; documentation index and clean-up; licence left to the client |
 
 **Indicative total:** about 5–6 weeks for one engineer (M1 in about 2 weeks).
 

@@ -39,8 +39,8 @@ syntax. Every script has a PowerShell twin (`scripts/<name>.ps1`, same flags).
 | PostgreSQL | Users, refresh tokens, query log, reviews, escalations, eval runs, index versions, runtime config, audit log | Managed database (prod), StatefulSet (local) |
 | `web` | Static | Image `rag-web:<tag>` |
 
-Request path and decisions: [`docs/architecture.md`](docs/architecture.md). API:
-[`docs/api.md`](docs/api.md). Release process: [`docs/releasing.md`](docs/releasing.md).
+Request path and decisions: [`docs/Architecture.md`](docs/Architecture.md). API:
+[`docs/API.md`](docs/API.md). Release process: [`docs/releasing.md`](docs/releasing.md).
 
 ## 2. Environments
 

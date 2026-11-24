@@ -20,7 +20,8 @@ from sqlalchemy.ext.asyncio import create_async_engine
 
 from app.db.migrations import upgrade
 
-PG_IMAGE = "postgres:17-alpine"
+# Same major version as Compose and the local Kubernetes overlay (manual test F-16).
+PG_IMAGE = "postgres:18-alpine"
 
 
 def sqlite_url(path: Path) -> str:
